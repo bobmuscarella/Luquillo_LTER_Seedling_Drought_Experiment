@@ -1,9 +1,6 @@
 ### Combined code for Seedling Drought Experiment
 
-
-
 # Read data from Github
-
 path <- "https://raw.github.com/bobmuscarella/Luquillo_LTER_Seedling_Drought_Experiment/master/Data/"
 
 growth_url <- paste0(path, "LUQ_DroughtExp_Seedling_growth.csv")
@@ -17,64 +14,45 @@ trait <- read.csv(traits_url)
 photo <- read.csv(photo_url)
 
 
+#########################
+### Survival analysis ###
+#########################
 
-### Survival analysis
 library(survival)
 library(survminer)
 library(coxme)
 library(ggplot2)
 
-# the `seedlingdata` object has some weird extra rows at the end... I remove those here:
-seedlingdata <- survival[1:960,]
-
-# Make sure the 'species' column is a factor and drop the blank factor level that originated from the extra rows above
-seedlingdata$species <- droplevels(as.factor(seedlingdata$species))
-
-### Run all the models in a loop
-
-# Make a list to hold the results
-results <- list()
-
-# Run the loop, all the models for one species at a time
-for (i in seq_along(levels(seedlingdata$species))){
-  
+### Run species-by-species survival models in a loop
+surv_results <- list()
+for (i in seq_along(levels(surv$Species))){
   # Subset the data for the 'i-th' species
-  focdat <- seedlingdata[seedlingdata$species %in% levels(seedlingdata$species)[i],]
-  
-  # Run the models (including a model with only plot as rand eff)
-  fit1 <- coxph(Surv(days, status) ~ Moisture + densiometer + May_LA, data=focdat, model=T)
-  fit2 <- coxme(Surv(days, status) ~ Moisture + densiometer + May_LA 
-                + (1|Plot), data=focdat)
-  fit3 <- coxme(Surv(days, status) ~ Moisture + densiometer + May_LA 
-                + (1|Plot/ID), data=focdat)
-  
-  # Make the results into a smaller list of three that goes into one space of the 'results' list
-  results[[i]] <- list(RE_none=fit1, RE_plot=fit2, RE_plotID=fit3)
-  
-  # Name each element of the results list as the species
-  names(results)[i] <- levels(seedlingdata$species)[i]
+  focdat <- surv[surv$Species %in% levels(surv$Species)[i],]
+  # Run the models (we had experimented with other random effects but AIC selected this)
+  surv_results[[i]] <- coxme(Surv(Days, Status) ~ Moisture + Densiometer + May_LA 
+                             + (1|Plot), data=focdat)
+  names(surv_results)[i] <- levels(surv$Species)[i]
 }
 
-# ANOVA for each species, all at the same time
-lapply(results, function(x) anova(x[[1]], x[[2]], x[[3]]))
+# Build a summary table for survival model results
+surv_results
 
-# Summarize all the models
-lapply(results, function(x) lapply(x, summary))
+
 
 
 ################## Graphing ###########################
-PREMON_test.cox <- predict(results$PREMON$RE_plot)
+PREMON_test.cox <- predict(surv_results$PREMON)
 
 # The following causes the error (x and y lengths differ)
-plot(seedlingdata$Moisture[seedlingdata$species %in% "PREMON"], PREMON_test.cox)
+plot(surv$Moisture[surv$Species %in% "PREMON"], PREMON_test.cox)
 
 # This is because observations with NA for any co-variate are excluded when fitting the model
 # Some rows have NA for the initial size (May_LA) variable
 # and that gives you the 'unequal' lengths error
 
 # You can remove those records and then look at it
-PREMON_moist <- seedlingdata$Moisture[seedlingdata$species %in% "PREMON" & 
-                                        !is.na(seedlingdata$May_LA)]
+PREMON_moist <- surv$Moisture[surv$Species %in% "PREMON" & !is.na(surv$May_LA)]
+
 
 UREBAC_moist <- seedlingdata$Moisture[seedlingdata$species %in% "UREBAC" & 
                                         !is.na(seedlingdata$May_LA)]
@@ -161,6 +139,82 @@ points(moist, Inlau_predict, col=5)
 # apparently means 'linear predictor'.  There are other options; see these help files:
 ?predict.coxph # This allows for 'newdata' and different 'types'
 ?predict.coxme # This says 'newdata' is not yet supported but it allows for different 'types' of predictions
+
+
+
+
+
+
+
+##############################################
+##############################################
+### Growth analysis ##########################
+##############################################
+##############################################
+
+
+# Here is the growth script and data, which hasn’t been changed since you so expertly crafted it. The script needs to be modified so the coefficients (and 95% CI) for soil moisture, densitometer & starting size are saved for each species from the best model to be used in plotting with the PCA scores.  
+
+
+# setwd("C:\\Users\\Matlaga\\Documents\\R")
+
+# For Bob
+# setwd("/Users/au529793/Downloads/fw")
+
+library(lme4)
+
+d <- read.table("Seedling growth june 12.txt",header=TRUE,sep="\t")
+
+# Create the new data.frame to have growth during each interval
+
+df <- data.frame()
+for(i in unique(d$Order)){
+  focdat <- d[d$Order==i,]
+  species <- as.factor(focdat$Species[-1])
+  growth <- (focdat$Leaf_area[-1] - focdat$Leaf_area[-9]) / (focdat$days[-1] - focdat$days[-9])
+  startsize <- focdat$Leaf_area[-9]
+  # Note here we are using the grand mean soil moisture...
+  moisture <- focdat$Moisture[-1]
+  densiometer <- focdat$densiometer[-1]
+  plot <- as.factor(focdat$Shelter[-1])
+  indv <- as.factor(focdat$Order[-1])
+  interval <- 1:8
+  tmpdf <- data.frame(species, growth, moisture, densiometer, startsize, plot, indv, interval)
+  df <- rbind(df, tmpdf)
+  df <- df[!is.na(df$growth),]
+}
+
+
+cols <- RColorBrewer::brewer.pal(8, "Dark2")
+plot(df$moisture, df$growth, col=scales::alpha(cols[df$species],0.5), pch=16)
+abline(h=0, lty=2)
+
+fits <- list()
+for(sp in 1:length(levels(df$species))){
+  print(levels(df$species)[sp])
+  tmpdf <- df[df$species %in% levels(df$species)[sp],]
+  head(tmpdf)
+  fits[[sp]] <- lmer(growth ~ moisture + densiometer + startsize + (1|plot) + (1|indv),
+                     data=tmpdf)
+  names(fits)[sp] <- levels(df$species)[sp]
+}
+
+# Extract the coefficient for soil moisture
+moist_coeffs <- unlist(lapply(fits, function(x) fixef(x)[2]))
+
+# Get 95% confidence intervals on the soil moisture effect
+moist_coeffs_cis <- do.call(rbind, lapply(fits, function(x) confint(x)['moisture',]))
+
+# Plot the point estimates with 95% CIs
+par(mar=c(6,5,2,2))
+plot(moist_coeffs, axes=F, xlab=NA, 
+     ylab='Estimated coefficient (growth x moisture)', 
+     pch=21, bg=cols, cex=2, ylim=range(cis))
+segments(1:8, cis[,1], 1:8, cis[,2], col=cols, lwd=2)
+abline(h=0, lty=2)
+axis(1, labels=levels(df$species), at=1:8, las=2)
+axis(2)
+box()
 
 
 
