@@ -1,0 +1,68 @@
+### METADATA for LUQ DroughtExp Survey Photosyntehsis.csv
+
+## Data collected by J. Aaron Hogan & Robert Muscarella, January 2020, El Verde, Puerto Rico - in collaboration with Jess Zimmerman, Maria Uriate, David Matlaga & Roel Lammerant.
+## correspondence concerning these data should be directed to J. Aaron Hogan (jamesaaronhogan@gmail.com).
+
+## Description: 
+Ambient (aka survey) photosynthesis measurements were measured for 549 seedlings in a seedling drought experiment in Luquillo, Puerto Rico.  The experiment was located near the El Verde Field Station, in the Luquillo Experimental Forest, and utilized PVC plastic rain-out shelters. Data were collected using two Li-6800 portable photosynthesis systems just before seedlings were harvested at the end of the experiment (January 18-22, 2020).  
+
+The machine settings were as follows: flow rate = 400 µmol mol^-¹, RHchamber = 70%, [CO2] = 400 µmol mol^-¹, mixing fan = 10000 rpm, Tair = 25°C & light = 500 µmol m^² s^-¹ (which was determined to be non-limiting for these seedling based on several light response curves .  
+The flourometer was set to measure leaf flourescence using a pulse-modualed flash, followed by a dark pulse.  The flourometer settings are as follows: 1. measuring beam: dark mod rate = 5KHz, light mod rate = 50KHz, flash mod rate = 250 KHz, averaging = 15s. 2. multiphase flash: red target = 10000 µmol m^² s^-¹,  phases 1 2 & 3 = 300ms, Ramp = 40%, output rate = 500 Hz, margin = 5 points. 3. dark pulse: far red target = 25 µmol m^² s^-¹, duration = 5s, before & after = 1s, margin = 54 points.
+
+We used five stability criteria for assessing leaf gas exchange stability within the Li-6800 chamber before logging each measurement.  All stability criteria were assessed over a 15s window. The stability criteria were: gsw - slope < 0.1 mol m^² s^-¹, A - slope and standard deviation < 0.5 µmol m^² s^-¹, E - slope < 0.5 and standard deviation < 1 mol m^² s-¹, ΔH2O (the difference between sample and reference IRGA air humidity) - slope < 0.5 mmol mol^-¹, and ΔCO2 (the difference between sample and reference IRGA [CO2]) - slope < 1 and standard deviation < 0.75 µmol mol^¹. 
+ 
+Leaf areas of seedlings were assessed visually. When areas did not entirely fill the leaf chamber, the gas exchange constant was scaled to the estimated percentage of leaf chamber area occupied by the leaf (see variable S below).
+
+Data are presented in a simple form, here.  Many of the intermediate or less necessary variables from the Li-COR 6800 data log are not included.  Those data may be available upon request. 
+
+## Metadata are in the form of: # Variable - description with units
+
+# Variable list:
+
+# Date - the date the measurement was taken YYYY-MM-DD
+# Treatment - the treatment of the plot where the seedling was located, either drought or control
+# Plot # - the plot number where the seedling was located, ranges from 1-60
+# Position - the position in the 4x4 planted grid of seedlings within the plot, from 1 being top left to 16 being bottom right seedlings were numbered consecutively across in rows
+# Species name - an eight level factor for denoting the six letter code of the species.  Codes are as follows: CECSCH - Cecropia schreberiana Miq. (Urticacee) , GUAGUI - Guarea guidonia (L.) Sleumer (Meliaceae),  INLAU - Inga laurina (Sw.) Willd. (Leguminosae), MANBID - Manilkara bidentata (A.DC.) A.Chev. (Sapotaceae), PREMON -  Prestoea acuminata var. montana (Graham) A.J.Hend. & Galeano (Arecaceae), SCHMOR- Schefflera morototoni (Aubl.) Maguire, Steyerm. & Frodin (Araliaceae),  TETBAL - Tetragastris balsamifera (Sw.) Oken (Burseraceae), UREBAC - Urera baccifera (L.) Gaudich. ex Wedd. (Urticaceae).
+# E - Transpiration rate (corrected for leaks) in mol m^² s-¹
+# A - Assimilation rate (corrected for leaks) in µmol m^² s^-¹
+# Ca - Ambient CO2 level (in the chamber) in µmol m^² s^-¹
+# Ci - Intercellular CO2 concentration in µmol m^² s^-¹
+# Pci - Pressure of intercellular CO2 in Pa
+# gsw - Stomatal conductance to water vapor in mol m^² s^-¹
+# gtc - Total conductance to CO2 in mol m^² s^-¹
+# Rabs - Absorbed shortwave radiation in W m^-²
+# TleafEB - Leaf temperature from energy balance in °C
+# TleanCnd - Leaf temperature used for gas exchange computations in  °C (as measured by the leaf thermocouple)
+# SVPleaf - Saturation vapor pressure at leaf temperature in kPa
+# RHcham - Relative humidity in the chamber in %
+# VPcham - Vapor pressure in the chamber in kPa
+# SVPcham - Saturation vapor pressure in the chamber in kPa
+# LatHFlux - Latent heat flux (L). The latent heat flux is the transpiration rate E converted to W m^-²
+# SenHFlux - Sensible heat flux (H). The sensible heat flux is a function of the leaf - air temperature difference Tl-Ta, the specific heat capacity of the air cp (29.3 J mol^-¹ K^-¹) and the one-sided boundary layer conductance for heat transfer of the leaf gbh, which is 0.92 times the boundary layer conductance for water vapor (gbw)
+# NetTherm - Net thermal balance. The net thermal balance is based on the leaf temperature and the surrounding chamber wall temperature. The total radiation balance(R) computation needs the net thermal balance (R=Rabs+NetTherm).
+# EBSum - The sum of leaf energy balance, the sum of sensible and latent heat flux and the net thermal balance: Ebsum = L+R+H (see above)
+# Fs - steady-state fluorescence (arbitraty units). Fluorescence level of the light-adapted sample when at ambient light conditions. 
+# Fm' - maximal, light-adapted fluorescence. Fluorescence level of the light-adapted sample when a high-intensity pulse has been applied. 
+# PhiPS2 - the quantum efficiency of photosystem II. The proportion of light absorbed by PSII used in photochemistry. 
+# ETR - electron transport rate in µmol m^² s^-¹. Estimated from fluorometer measurements. 
+# Fv'/Fm' - the ratio of variable fluorescence (DeltaF) to maximal, light-adapted fluorescence. The light-adapted flourescent yield (Y(II)).  
+# PhiCO2 - the maximal quantum yield of CO2 assimilation (arbitrary units)
+# NPQ - non-photochemical quenching (arbitrary units)
+# Qin - PPFD incident on the leaf in µmol m^² s^-¹
+# Qabs - PPFD absorbed by the leaf in µmol m^² s^-¹
+# alpha - weighted leaf absorption (unitless) 
+# convert - Weighted conversion from PPFD to W m^² in J/µmol
+# S - leaf surface area in cm^², aka the gas exchange constant, usually 6 cm^² unless the leaf chamber was not fully filled with leaf area.
+# CO2_s - Sample IRGA CO2 concentration in µmol mol^¹
+# CO2_r - Reference IRGA CO2 concentration in µmol mol^¹
+# H2O_s - Sample IRGA H2O concentration in mmol mol^-¹
+# H2O_r - Reference IRGA H2O concentration in mmol mol^-¹
+# Flow - Flow rate of air to the chamber in µmol s^-¹
+# Pa - Atmospheric pressure in kPa
+# deltaPcham - Chamber overpressure in kPa
+# Tair - Chamber air temperature in °C
+# Tleaf - Temperature measured by leaf thermocouple in °C
+# Fan_speed - Chamber fan rotation rate in rpm
+# Qamb_out - External quantum sensor light (PAR) in µmol m^² s^-¹
+# Stability_State - the fraction of stability criteria (out of 5) met when the data point was logged 
