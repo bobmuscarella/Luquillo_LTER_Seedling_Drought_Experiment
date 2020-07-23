@@ -14,6 +14,7 @@
 path <- "https://raw.github.com/bobmuscarella/Luquillo_LTER_Seedling_Drought_Experiment/master/Data/"
 
 grow <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_growth.csv"))
+grow$Date <- as.Date(as.character(grow$Date), format="%m/%d/%y")
 surv <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_survival.csv"))
 trait <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_traits.csv"))
 photo <- read.csv(paste0(path, "LUQ_DroughtExp_Survey_photosynthesis.csv"))
@@ -323,39 +324,41 @@ dev.off()
 
 
 
-
-### 
-
-
-library(RColorBrewer)
-
-
-# Add light data
-gdat$light <- data$hemiplot[match(gdat$Shelter, data$Plot)]
-# Make an ID for each individual plant
-gdat$ID <- paste(gdat$Shelter, gdat$Seedlingposition, sep=".")
-# Reorder the data for plotting convenience
-gdat <- gdat[order(gdat$Species, gdat$ID, gdat$Period),]
-
-
-grow
+######################################################################################
+### Plot individual growth trajectories over time with soil moisture and mortality ###
+######################################################################################
 
 grow$soil_col <- brewer.pal(10, "Spectral")[cut(grow$Moisture, 10)]
 
+pdf("/Users/au529793/Desktop/Figure3.pdf", height=6, width=8)
+
+# Reorder the data for plotting convenience
+grow <- grow[order(grow$Species, grow$Order, grow$Census),]
+
 par(mfrow=c(2,4), mar=c(4,4,2,1))
-for (sp in 1:length(unique(growdf$species))){
+for (sp in 1:length(unique(grow$Species))){
   focsp <- levels(grow$Species)[sp]
   tmpdat <- grow[grow$Species %in% focsp,]
   
   # Make a blank plot to hold the lines drawn below
-  plot(tmpdat$Days, tmpdat$LA, pch=NA, 
+  plot(tmpdat$Date, tmpdat$Leaf_area, pch=NA, 
        xlab=NA, ylab="Leaf Area (cm2)",
        main=focsp, las=2)
   
-  for(i in 1:length(unique(tmpdat$ID))){
-    focdat <- tmpdat[tmpdat$ID == unique(tmpdat$ID)[i],]
-    lines(focdat$date, focdat$LA, col=focdat$soil_col, lwd=0.5)
+  for(i in 1:length(unique(tmpdat$Order))){
+    focdat <- tmpdat[tmpdat$Order == unique(tmpdat$Order)[i],]
+    focdat <- focdat[!is.na(focdat$Leaf_area),]
+    lines(focdat$Date, focdat$Leaf_area, col=focdat$soil_col, lwd=0.5)
   }
+  
+  for(i in 1:length(unique(tmpdat$Order))){
+    focdat <- tmpdat[tmpdat$Order == unique(tmpdat$Order)[i],]
+    focdat <- focdat[!is.na(focdat$Leaf_area),]
+    if(nrow(focdat)<9){
+      points(focdat$Date[nrow(focdat)], focdat$Leaf_area[nrow(focdat)], 
+             pch=4, cex=0.35, lwd=0.75)
+      }
+    }
   
   # Add a legend to the panel with CECSCH (it fits best here)
   if (focsp=="CECSCH"){
@@ -364,3 +367,14 @@ for (sp in 1:length(unique(growdf$species))){
            bty="n", lty=1, lwd=2, title="Soil Moisture")
   }
 }
+
+dev.off()
+
+
+
+
+###########################
+### Trait data analysis ###
+###########################
+
+
