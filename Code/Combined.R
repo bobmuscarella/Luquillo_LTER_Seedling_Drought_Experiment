@@ -138,41 +138,24 @@ for(sp in 1:length(levels(growdf$species))){
   names(grow_fits)[sp] <- levels(growdf$species)[sp]
 }
 
-# moist_coeffs <- unlist(lapply(grow_fits, function(x) fixef(x)[2]))
-
-# round(do.call(cbind, lapply(grow_fits, function(x) fixef(x))),3)
 
 # Extract coefficients and compute confidence intervals
 Species <- rep(names(grow_fits), each=4)
 Variable <- rep(c("Intercept","Moisture","Densiometer","Start_size"), 8)
-# Estimate <- round(do.call(c, lapply(grow_fits, fixef)),3)
 Estimate <- round(do.call(c, lapply(grow_fits, coef)),3)
-# cis <- do.call(rbind, lapply(grow_fits, function(x) round(confint(x)[-c(1:3),],3)))
-cis <- do.call(rbind, lapply(grow_fits, function(x) round(confint(x),3)))
+growcis <- do.call(rbind, lapply(grow_fits, function(x) round(confint(x),3)))
 
-t2 <- as.data.frame(cbind(Species, Variable, Estimate, cis))
+t2 <- as.data.frame(cbind(Species, Variable, Estimate, growcis))
 rownames(t2) <- NULL
 t2
 
 
 
-### Plot the point estimates with 95% CIs
-# par(mar=c(6,5,2,2))
-# plot(moist_coeffs, axes=F, xlab=NA, 
-#      ylab='Estimated coefficient (growth x moisture)', 
-#      pch=21, bg=cols, cex=2, ylim=range(cis))
-# segments(1:8, cis[,1], 1:8, cis[,2], col=cols, lwd=2)
-# abline(h=0, lty=2)
-# axis(1, labels=levels(growdf$species), at=1:8, las=2)
-# axis(2)
-# box()
 
+###########################################
+### Plot Effects on Survival and Growth ###
+###########################################
 
-###############################################
-### Plotting Effects on Survival and Growth ###
-###############################################
-
-pdf("/Users/au529793/Desktop/Figure1.pdf", width = 6, height = 8)
 
 # Predict survival as a function of soil moisture by species
 pred_moist <- list()
@@ -197,6 +180,9 @@ for (i in seq_along(levels(surv$Species))){
   pred_size[[i]] <- exp(-predict(surv_fits_plot[[i]], newdata=newdata_size, type='expected'))
 }
 
+
+
+pdf("/Users/au529793/Desktop/Figure1.pdf", width = 6, height = 8)
 par(mfcol=c(3,2), mar=c(4,5,1,0.5), oma=c(1,1,3,1))
 
 plot(0:50, ylim=c(0,100), pch=NA,
@@ -250,7 +236,6 @@ legend('topleft', legend=levels(surv$Species),
        cex=0.7, bty='n', lty=1, col=cols, lwd=2)
 mtext("Growth", 3, 1)
 
-
 plot(0:25, ylim=c(-0.25,1), pch=NA,
      xlab="Canopy openness (%)", 
      ylab=bquote("Pred. Growth (cm"^2~"day"^-1*")"))
@@ -282,5 +267,100 @@ for(i in seq_along(levels(growdf$species))){
 dev.off()
 
 
+#############################################
+### Plot the point estimates with 95% CIs ###
+#############################################
+
+t2$`2.5 %` <- as.numeric(as.character(t2$`2.5 %`))
+t2$`97.5 %` <- as.numeric(as.character(t2$`97.5 %`))
 
 
+pdf("/Users/au529793/Desktop/Figure2.pdf", height=4, width=7)
+par(mfrow=c(1,2), mar=c(6,4,1,1), oma=c(0.5,0.5,2,0.5))
+
+pt.pch <- ifelse(apply(sign(t2[t2$Variable=="Moisture",c('2.5 %','97.5 %')]), 1, 
+                       function(x) x[1]==x[2]),
+                 16, 21)
+plot(as.numeric(as.character(t2$Estimate[t2$Variable=='Moisture'])), 
+     axes=F, xlab=NA,
+     ylab='Estimated coefficient',
+     pch=pt.pch,
+     col=cols, cex=2, 
+     ylim=range(growcis[rownames(growcis)=="moisture",]),
+     xlim=c(0,9),
+     main="Growth x Moisture", lwd=3)
+segments(1:8, as.numeric(as.character(t2$`2.5 %`[t2$Variable=='Moisture'])),
+         1:8, as.numeric(as.character(t2$`97.5 %`[t2$Variable=='Moisture'])),
+         col=cols, lwd=2)
+abline(h=0, lty=2)
+axis(1, labels=levels(growdf$species), at=1:8, las=2)
+axis(2)
+box()
+
+
+
+pt.pch <- ifelse(apply(sign(t1[t1$Variable=="Moisture",c('2.5 %','97.5 %')]), 1, 
+                       function(x) x[1]==x[2]),
+                 16, 21)
+plot(-as.numeric(as.character(t1$beta[t1$Variable=='Moisture'])), 
+     axes=F, xlab=NA,
+     ylab='Estimated coefficient',
+     pch=pt.pch, col=cols, cex=2, lwd=3,
+     ylim=c(-max(t1$`97.5 %`[t1$Variable=="Moisture"]),
+            -min(t1$`2.5 %`[t1$Variable=="Moisture"])),
+     xlim=c(0,9),
+     main="Survival x Moisture")
+segments(1:8, -as.numeric(as.character(t1$`97.5 %`[t1$Variable=='Moisture'])),
+         1:8, -as.numeric(as.character(t1$`2.5 %`[t1$Variable=='Moisture'])), 
+         col=cols, lwd=2)
+abline(h=0, lty=2)
+axis(1, labels=levels(growdf$species), at=1:8, las=2)
+axis(2)
+box()
+
+
+dev.off()
+
+
+
+
+### 
+
+
+library(RColorBrewer)
+
+
+# Add light data
+gdat$light <- data$hemiplot[match(gdat$Shelter, data$Plot)]
+# Make an ID for each individual plant
+gdat$ID <- paste(gdat$Shelter, gdat$Seedlingposition, sep=".")
+# Reorder the data for plotting convenience
+gdat <- gdat[order(gdat$Species, gdat$ID, gdat$Period),]
+
+
+grow
+
+grow$soil_col <- brewer.pal(10, "Spectral")[cut(grow$Moisture, 10)]
+
+par(mfrow=c(2,4), mar=c(4,4,2,1))
+for (sp in 1:length(unique(growdf$species))){
+  focsp <- levels(grow$Species)[sp]
+  tmpdat <- grow[grow$Species %in% focsp,]
+  
+  # Make a blank plot to hold the lines drawn below
+  plot(tmpdat$Days, tmpdat$LA, pch=NA, 
+       xlab=NA, ylab="Leaf Area (cm2)",
+       main=focsp, las=2)
+  
+  for(i in 1:length(unique(tmpdat$ID))){
+    focdat <- tmpdat[tmpdat$ID == unique(tmpdat$ID)[i],]
+    lines(focdat$date, focdat$LA, col=focdat$soil_col, lwd=0.5)
+  }
+  
+  # Add a legend to the panel with CECSCH (it fits best here)
+  if (focsp=="CECSCH"){
+    legend("topright", legend=c("High","Mid","Low"), 
+           col=brewer.pal(10, "Spectral")[c(9,5,2)], 
+           bty="n", lty=1, lwd=2, title="Soil Moisture")
+  }
+}
