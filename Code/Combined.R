@@ -14,13 +14,13 @@
 path <- "https://raw.github.com/bobmuscarella/Luquillo_LTER_Seedling_Drought_Experiment/master/Data/"
 
 grow <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_growth.csv"))
-
 grow$Date <- as.Date(as.character(grow$Date), format="%m/%d/%y")
-grow$ID <- paste(grow$Shelter, grow$Position, sep = '.')
+grow$ID <- paste(grow$Plot, grow$Position, sep = '.')
 
 surv <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_survival.csv"))
-trait <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_traits.csv"))
+surv$ID <- paste(surv$Plot, surv$Position, sep = '.')
 
+trait <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_traits.csv"))
 trait$ID <- paste(trait$Plot, trait$Position, sep = '.')
 
 photo <- read.csv(paste0(path, "LUQ_DroughtExp_Survey_photosynthesis.csv"))
