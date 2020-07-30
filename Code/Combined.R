@@ -36,10 +36,10 @@ library(lme4)
 library(scales)
 library(ggplot2)
 library(factoextra)
+library(vegan)
 
 # Set a color palette for species
 cols <- brewer.pal(8, "Dark2")
-
 
 #########################
 ### Survival analysis ###
@@ -137,9 +137,7 @@ for(sp in 1:length(levels(growdf$species))){
 # Extract coefficients and compute confidence intervals
 Species <- rep(names(grow_fits), each=4)
 Variable <- rep(c("Intercept","Moisture","Densiometer","Start_size"), 8)
-# Estimate <- round(do.call(c, lapply(grow_fits, coef)),3)
 Estimate <- round(do.call(c, lapply(grow_fits, fixef)),3)
-# growcis <- do.call(rbind, lapply(grow_fits, function(x) round(confint(x),3)))
 growcis <- do.call(rbind, lapply(grow_fits, function(x) round(confint(x)[-(1:2),],3)))
 
 t2 <- as.data.frame(cbind(Species, Variable, Estimate, growcis))
@@ -268,7 +266,6 @@ dev.off()
 
 pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/FigureS1.pdf", height=4, width=7)
 
-
 par(mfrow=c(1,2), mar=c(6,4,1,1), oma=c(0.5,0.5,2,0.5))
 
 pt.pch <- ifelse(apply(t1[t1$Variable=="Moisture",c('2.5 %','97.5 %')]<0, 1, 
@@ -316,14 +313,13 @@ dev.off()
 
 ######################################################
 ######################################################
-######################################################
 ############### Trait data analysis ##################
 ######################################################
 ######################################################
-######################################################
 
-
-### Boxplots of individual traits
+###############################################
+### Box plots of individual (logged) traits ###
+###############################################
 pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/FigureS2.pdf", height=9, width=8)
 
 par(mfrow=c(6,4), mar=c(1,4,0.25,0.25), oma=c(3,0,0,0))
@@ -341,8 +337,9 @@ for(i in c(5:20,24:31)){
 
 dev.off()
 
-
-### Linear regressions for individual traits vs. soil moisture (LOGGED!)
+############################################################################
+### Linear regressions for individual traits vs. soil moisture (LOGGED!) ###
+############################################################################
 pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/FigureS3.pdf", height=9, width=8)
 
 par(mfrow=c(6,4), mar=c(1,4,0.25,0.25), oma=c(3,0,0.5,0))
@@ -370,20 +367,14 @@ for(i in c(5:20,24:31)){
 dev.off()
 
 
+#####################################
+### PCA with leaf and root traits ###
+#####################################
 
-
-##########################################
-### PCA with leaf and root traits
-##########################################
-
-### remove NA values and 2 urebac outliers (56,94)
-# PCA_data <- trait[-c(56,94,194,195,324,339,401,497),]
-
+### Remove urebac outlier
 trait <- trait[trait$Plot!=12 & trait$Position!=11,]
 
-### PCA with only leaf and root traits
-library(vegan)
-
+### PCA with leaf and root traits
 ord <- prcomp(~ LeafArea  +
                 LMA +
                 LDMC +
@@ -396,6 +387,7 @@ ord <- prcomp(~ LeafArea  +
                 SRL +
                 RTD,
               center = TRUE, scale = TRUE, data=trait)
+
 summary(ord)
 
 ### visualize the variables used in the PCA
@@ -414,6 +406,7 @@ b1 <- fviz_pca_ind(ord,
 ### Put the plots together
 PCAplot1 <- ggarrange(a1, b1, ncol = 2, nrow = 1)
 
+
 pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/Figure3.pdf", height=5, width=10)
 PCAplot1
 dev.off()
@@ -423,6 +416,7 @@ dev.off()
 tres.var <- get_pca_var(ord)
 contrib1 <- tres.var$contrib
 contrib1
+
 
 ### Extract PCA coordinates for individuals and plotting it against soil moisture
 trait$PCA1 <- get_pca_ind(ord)$coord[,1]
@@ -616,6 +610,3 @@ dev.off()
 # axis(1); axis(2); box()
 # 
 # dev.off()
-
-
-
