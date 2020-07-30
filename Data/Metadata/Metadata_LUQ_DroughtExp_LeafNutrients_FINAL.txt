@@ -1,0 +1,31 @@
+### METADATA for LUQ DroughtExp Leaf Nutrients.csv
+
+## Samples were processed by J. Aaron Hogan, March 2020, Oak Ridge National Lab, Oak Ridge, TN - in collaboration with Robert Muscarella, Jess Zimmerman, Maria Uriate, David Matlaga & Roel Lammerant.
+## correspondence concerning these data should be directed to J. Aaron Hogan (jamesaaronhogan@gmail.com).
+
+## Description: 
+A seedling drought experiment was carried out during the 2nd half of the 2019 calendar year in Luquillo, Puerto Rico.  The experiment was located near the El Verde Field Station, in the Luquillo Experimental Forest, and utilized PVC plastic rain-out shelters. At the end of the experiment (January 18-22, 2020), all surviving seedlings were harvested as measured for functional traits.  
+
+Leaf nutrient analyses were conducted on a subset of those harvested seedlings (120 in total), which were selected to adequately cover the maximum and minimum values of seedling plot soil moisture conditions.  So, 10 individuals of six of the eight species in the experiment (excluding Schefflera morototoni (Aubl.) Maguire, Steyerm. & Frodin and Urera baccifera (L.) Gaudich. ex Wedd., for which sample sizes were too small due to high seedling mortality) were chosen from both the wet and the dry ends of the average plot soil moisture gradient from throughout the experiment.  
+
+Dried leaf samples were homogenized using the mini-G 1600 tissue homogenizer, with samples in 15 mL plastic vials with stainless steel beads. Samples were micro-weighed by hand and send to the Duke Environmental Stable Isotope Lab (DEVIL) in Durham, NC, for elemental analysis.  Leaf carbon, nitrogen, and their isotopes were measured using an IRMS (isotopic ratio mass-spec) elemental analyzer - a Carlos Erba NA 1500 (Thermo Fischer).  see: https://sites.nicholas.duke.edu/devil/
+
+intrinsic water-use efficiency (iWUE_13C) and intrinsic concentration of intracellular CO2 (iCi_13C) were calculated using the carbon isotope data and photosynthetic carbon fraction theory as outlined in Lambers, Chapin & Pons (2008) Plant Physiological Ecology, 2nd Edition, Springer (see box 2A.2 on pages 22-24). 
+
+## Metadata are in the form of: # Variable - description with units
+# Variable list:
+
+# Plot - the plot number where the seedling was located, ranges from 1-60
+# Position - the position in the 4x4 planted grid of seedlings within the plot, from 1 being top left to 16 being bottom right seedlings were numbered consecutively across in rows
+# Species name - an eight-level factor for denoting the six letter code of the species.  Codes are as follows:  GUAGUI - Guarea guidonia (L.) Sleumer (Meliaceae),  INLAU - Inga laurina (Sw.) Willd. (Leguminosae), MANBID - Manilkara bidentata (A.DC.) A.Chev. (Sapotaceae), PREMON -  Prestoea acuminata var. montana (Graham) A.J.Hend. & Galeano (Arecaceae), SCHMOR- Schefflera morototoni (Aubl.) Maguire, Steyerm. & Frodin (Araliaceae),  TETBAL - Tetragastris balsamifera (Sw.) Oken (Burseraceae).
+# ID - the unique seedling identification number as the combination of plot and position. 
+# Soil_moisture - the temporal average soil moisture of the plot in %
+# treatment - the treatment of the seedling plot - dry for rain exclusion and wet for plots where rainfall was added back (see methods)
+# d15N_RAW - the raw, measured delta 15N values from the elemental analyzer (i.e., working gas sample values)
+# %N - the concentration of leaf tissue nitrogen in mg per g.
+# d13_RAW - the raw, measured delta 13C values from the elemental analyzer (i.e., working gas sample values)
+# %C - the concentration of leaf tissue carbon in mg per g. 
+# d15N_NORMALIZED - delta 15N values normalized with respect to the international stable isotope reference scale. 
+# d13C_NORMALIZED - delta 13C values normalized with respect to the international stable isotope reference scale. 
+# Ci_13C - intrinsic leaf tissue Ci values calculated from the d13C_NORMALIZED values (based on equations in Lambers, Chapin and Pons 2008)
+# iWUE_13C - intrinsic leaf tissue water use efficiency calculated from the d13C_NORMALIZED values (based on equations in Lambers, Chapin and Pons 2008)
