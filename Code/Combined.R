@@ -90,7 +90,7 @@ t1$Variable <- unlist(lapply(strsplit(rownames(t1), "\\."), function(x)x[[2]]))
 t1 <- cbind(t1, round(do.call(rbind, lapply(surv_fits, confint)),3))
 t1 <- t1[,c("Species","Variable","beta","2.5 %", "97.5 %","se","z","p")]
 
-write.csv(t1, "Desktop/Table1.csv", row.names = F)
+write.csv(t1, "/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Tables/Table1_survival_summary.csv", row.names = F)
 
 
 ##############################################
@@ -146,6 +146,8 @@ t2 <- as.data.frame(cbind(Species, Variable, Estimate, growcis))
 t2$`2.5 %` <- as.numeric(as.character(t2$`2.5 %`))
 t2$`97.5 %` <- as.numeric(as.character(t2$`97.5 %`))
 rownames(t2) <- NULL
+
+write.csv(t2, "/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Tables/Table2_growth_summary.csv", row.names = F)
 
 
 ######################################################################################
