@@ -538,7 +538,7 @@ plot(-t1$beta[t1$Variable=='Moisture'],
      ylim=c(-4,5),
      cex=2,
      xlab="Moisture effect on Survival",
-     ylab="PC Dim 1")
+     ylab="PC Dim 2")
 mtext("C", 3, -1.2, at=-0.01)
 segments(-t1$`2.5 %`[t1$Variable=='Moisture'], 
          tapply(trait$PCA2, trait$Species, mean, na.rm=T),
