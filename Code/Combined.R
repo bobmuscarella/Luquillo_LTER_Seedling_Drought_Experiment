@@ -26,6 +26,11 @@ trait$ID <- paste(trait$Plot, trait$Position, sep = '.')
 photo <- read.csv(paste0(path, "LUQ_DroughtExp_Survey_photosynthesis.csv"))
 photo$ID <- paste(photo$Plot, photo$Position, sep = '.')
 
+nutrient <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_leafnutrients.csv"))
+# Add empty factor levels to keep species order consistent
+nutrient$Species <- factor(nutrient$Species, levels = levels(grow$Species))
+nutrient$ID <- paste(nutrient$Plot, nutrient$Position, sep = '.')
+
 # Load packages
 require(survival)
 require(survminer)
@@ -113,7 +118,7 @@ for(i in unique(grow$Order)){
   plot <- as.factor(focdat$Plot[-1])
   indv <- as.factor(focdat$Order[-1])
   interval <- 1:8
-  tmpdf <- data.frame(id, species, growth, moisture, densiometer, maysize, startsize, plot, indv, interval)
+  tmpdf <- data.frame(id, species, growth, moisture, densiometer, startsize, plot, indv, interval)
   growdf <- rbind(growdf, tmpdf)
   growdf <- growdf[!is.na(growdf$growth),]
 }
@@ -169,7 +174,6 @@ for (sp in 1:length(unique(grow$Species))){
   plot(tmpdat$Date, tmpdat$Leaf_area, pch=NA, 
        xlab=NA, ylab="Leaf Area (cm2)",
        main=focsp, las=2)
-  
   mtext(LETTERS[sp], 3, -1.5, at=as.Date("2019-6-10"))
   
   for(i in 1:length(unique(tmpdat$Order))){
@@ -189,10 +193,6 @@ for (sp in 1:length(unique(grow$Species))){
   
   # Add a legend to the panel with CECSCH (it fits best here)
   if (focsp=="CECSCH"){
-    # legend("topright", legend=c("High","Mid","Low"), 
-    #        col=brewer.pal(10, "Spectral")[c(10,5,1)], 
-    #        bty="n", lty=1, lwd=2, title="Soil Moisture")
-
     plotfunctions::gradientLegend(
       round(range(grow$Moisture),0),
       n.seg=1,
@@ -338,13 +338,16 @@ pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figu
 
 par(mfrow=c(6,4), mar=c(1,4,0.25,0.25), oma=c(3,0,0,0))
 
-for(i in c(5:20,24:31)){
-  b <- boxplot(trait[,i] ~ trait$Species, col=cols, log='y', axes=F, lwd=0.5, 
+for(i in 1:24){
+  column <- c(5:20,24:31)[i]
+  b <- boxplot(trait[,column] ~ trait$Species, col=cols, 
+               log='y', axes=F, lwd=0.5, 
                ylab=NA, xlab=NA)
   axis(1, labels=F, at=1:8)
   axis(2)
-  mtext(colnames(trait)[i], 2, 2, cex=0.5)
-  if(i>27){
+  mtext(colnames(trait)[column], 2, 2, cex=0.5)
+  mtext(LETTERS[i], 3, -0.75, at=1, cex=0.75)
+  if(column > 27){
     axis(1, labels=levels(trait$Species), at=1:8, las=2, cex.axis=0.5)
   }
 }
@@ -358,26 +361,29 @@ pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figu
 
 par(mfrow=c(6,4), mar=c(1,4,0.25,0.25), oma=c(3,0,0.5,0))
 
-for(i in c(5:20,24:31)){
-  plot(trait$Moisture, trait[,i], col=cols[trait$Species],
+for(i in 1:24){
+  column <- c(5:20,24:31)[i]
+  plot(trait$Moisture, trait[,column], col=cols[trait$Species],
        axes=F, lwd=0.5, ylab=NA, xlab=NA, log='y', cex=0.5)
   axis(1, labels=F)
   axis(2)
-  mtext(colnames(trait)[i], 2, 2, cex=0.5)
-  if(i>27){
+  mtext(colnames(trait)[column], 2, 2, cex=0.5)
+  mtext(LETTERS[i], 3, -1, at=12, cex=0.75)
+  if(column > 27){
     axis(1)
     mtext("Soil Moisture (%)", 1, 2.25, cex=0.75)
   }
   for(sp in 1:8){
     spdat <- trait[trait$Species==levels(trait$Species)[sp],]
-    if(sum(!is.na(spdat[,i]))>5){
-      fit <- lm(log10(spdat[,i]) ~ spdat$Moisture)
+    if(sum(!is.na(spdat[,column]))>5){
+      fit <- lm(log10(spdat[,column]) ~ spdat$Moisture)
       if(summary(fit)$coefficients[2,4] <= 0.05){
         abline(fit, col=cols[sp], lwd=2)
       }
     }
   }
 }
+
 dev.off()
 
 
@@ -420,10 +426,13 @@ b1 <- fviz_pca_ind(ord,
 ### Put the plots together
 PCAplot1 <- ggarrange(a1, b1, ncol = 2, nrow = 1)
 
-
-pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/Figure3.pdf", height=5, width=10)
-PCAplot1
-dev.off()
+########################
+### Plot PCA Results ###
+########################
+# pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/Figure3.pdf", height=5, width=10)
+# PCAplot1
+# dev.off()
+########################
 
 
 ### Contribution of variables
@@ -431,11 +440,14 @@ tres.var <- get_pca_var(ord)
 contrib1 <- tres.var$contrib
 contrib1
 
-
 ### Extract PCA coordinates for individuals and plotting it against soil moisture
 trait$PCA1 <- get_pca_ind(ord)$coord[,1]
 trait$PCA2 <- get_pca_ind(ord)$coord[,2]
 
+
+###############################################
+### Plot PCA axis 1 and 2 vs. Soil Moisture ###
+###############################################
 
 pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/FigureS3.pdf", height=5, width=10)
 
@@ -475,13 +487,13 @@ for(sp in 1:8){
 
 dev.off()
 
+###############################################
 
 
 
-
-
-
-
+#############################################################################
+### Plot PCA axis 1 and 2 vs. Soil Moisture effect on Survival and Growth ###
+#############################################################################
 
 pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/Figure4.pdf")
 
@@ -579,48 +591,43 @@ dev.off()
 
 
 
+#############################################################################
+### Look at change in WUE ###
+#############################################################################
 
 
-# pdf("/Users/au529793/Desktop/Figure8.v2.pdf")
-# 
-# par(mfrow=c(2,2), mar=c(4,4,1,1))
-# boxplot(trait$PCA1 ~ trait$Species, 
-#         at=-t1$beta[t1$Variable=='Moisture'], 
-#         col=cols, 
-#         xlim=c(0,0.4),
-#         ylim=c(-8,7),
-#         boxwex=0.025, axes=F, 
-#         xlab="Moisture effect on Survival",
-#         ylab="PCA1")
-# axis(1); axis(2); box()
-# legend('topright', legend=levels(surv$Species),
-#        cex=0.5, bty='n', pch=21, pt.bg = cols, pt.cex = 1.05)
-# 
-# boxplot(trait$PCA2 ~ trait$Species, 
-#         at=-unlist(lapply(surv_fits, function(x) coefficients(x)[1])), col=cols, 
-#         xlim=c(0,0.4),
-#         ylim=c(-8,7),
-#         boxwex=0.025, axes=F, 
-#         xlab="Moisture effect on Survival",
-#         ylab="PCA2")
-# axis(1); axis(2); box()
-# 
-# boxplot(trait$PCA1 ~ trait$Species, 
-#         at=unlist(lapply(grow_fits, function(x) fixef(x)[2])), col=cols, 
-#         xlim=c(-0.01,0.05),
-#         ylim=c(-8,7),
-#         boxwex=0.005, axes=F, 
-#         xlab="Moisture effect on Growth",
-#         ylab="PCA1")
-# axis(1); axis(2); box()
-# 
-# boxplot(trait$PCA2 ~ trait$Species, 
-#         at=unlist(lapply(grow_fits, function(x) fixef(x)[2])), col=cols, 
-#         xlim=c(-0.01,0.05),
-#         ylim=c(-8,7),
-#         boxwex=0.005, axes=F, 
-#         xlab="Moisture effect on Growth",
-#         ylab="PCA2")
-# axis(1); axis(2); box()
-# 
-# dev.off()
+pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/FigureS5.pdf")
+
+par(mar=c(5,5,1,1))
+plot(nutrient$Moisture, nutrient$iWUE_Lambers, pch=21,
+     bg=cols[nutrient$Species], xlim=c(2,45),
+     xlab="Soil Moisture (%)",
+     ylab=bquote("iWUE"~"("*mu*mol~mol^-1*")"))
+legend('topleft', legend=sort(unique(nutrient$Species)),
+       cex=0.75, bty='n', pch=21, 
+       pt.bg = cols[which(levels(nutrient$Species) %in% sort(unique(nutrient$Species)))], 
+       pt.cex=1.25, pt.lwd=1.25)
+
+t3 <- data.frame()
+wue_mods <- list()
+for(sp in 1:8){
+  focsp <- levels(nutrient$Species)[sp]
+  focnut <- nutrient[nutrient$Species %in% focsp,]
+  if(nrow(focnut)>2){
+    wue_mods[[sp]] <- lm(focnut$iWUE_Lambers ~ focnut$Moisture)
+    lty <- ifelse(summary(wue_mods[[sp]])$coef[2,4] < 0.05, 1, 2)
+    lwd <- ifelse(summary(wue_mods[[sp]])$coef[2,4] < 0.05, 2, 1)
+    segments(min(focnut$Moisture), 
+             predict(wue_mods[[sp]])[which(focnut$Moisture==min(focnut$Moisture))],
+             max(focnut$Moisture),
+             predict(wue_mods[[sp]])[which(focnut$Moisture==max(focnut$Moisture))], 
+             col=cols[sp], lty=lty, lwd=lwd)
+    t3 <- rbind(t3, as.data.frame(cbind(focsp, round(summary(wue_mods[[sp]])$coef, 4))))
+  }
+}
+
+t3 <- t3[grepl("Moisture", rownames(t3)),]
+rownames(t3) <- NULL
+t3
+
+dev.off()
