@@ -23,8 +23,8 @@ surv$ID <- paste(surv$Plot, surv$Position, sep = '.')
 trait <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_traits.csv"))
 trait$ID <- paste(trait$Plot, trait$Position, sep = '.')
 
-photo <- read.csv(paste0(path, "LUQ_DroughtExp_Survey_photosynthesis.csv"))
-photo$ID <- paste(photo$Plot, photo$Position, sep = '.')
+# photo <- read.csv(paste0(path, "LUQ_DroughtExp_Survey_photosynthesis.csv"))
+# photo$ID <- paste(photo$Plot, photo$Position, sep = '.')
 
 nutrient <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_leafnutrients.csv"))
 # Add empty factor levels to keep species order consistent
@@ -452,8 +452,8 @@ trait$PCA2 <- get_pca_ind(ord)$coord[,2]
 pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/FigureS3.pdf", height=5, width=10)
 
 par(mfrow=c(1,2))
-plot(trait$Moisture, trait$PCA1, pch=16,
-     col=cols[trait$Species], xlim=c(0,50), cex=0.5,
+plot(trait$Moisture, trait$PCA1, pch=21,
+     col=cols[trait$Species], xlim=c(0,50),
      xlab="Soil Moisture (%)",
      ylab="PC Dim 1")
 mtext("A", 3, -1.2, at=3, cex=1.25)
@@ -468,10 +468,10 @@ for(sp in 1:8){
 }
 
 legend('bottomleft', legend=levels(trait$Species),
-       cex=0.8, bty='n', col=cols, pch=16, pt.lwd=1.5)
+       cex=0.7, bty='n', col=cols, pch=21, pt.lwd=1.5, pt.cex=1.25)
 
-plot(trait$Moisture, trait$PCA2, pch=16, 
-     col=cols[trait$Species], xlim=c(0,50), cex=0.5,
+plot(trait$Moisture, trait$PCA2, pch=21, 
+     col=cols[trait$Species], xlim=c(0,50),
      xlab="Soil Moisture (%)",
      ylab="PC Dim 2")
 mtext("B", 3, -1.2, at=3, cex=1.25)
@@ -591,10 +591,9 @@ dev.off()
 
 
 
-#############################################################################
-### Look at change in WUE ###
-#############################################################################
-
+############################################
+### Look at change in WUE (Isotope data) ###
+############################################
 
 pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/FigureS5.pdf")
 
@@ -629,5 +628,9 @@ for(sp in 1:8){
 t3 <- t3[grepl("Moisture", rownames(t3)),]
 rownames(t3) <- NULL
 t3
+
+write.csv(t3, "/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Tables/TableS1_WUE_fits.csv", row.names = F)
+
+
 
 dev.off()
