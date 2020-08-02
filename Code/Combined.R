@@ -37,6 +37,7 @@ library(scales)
 library(ggplot2)
 library(factoextra)
 library(vegan)
+library(plotfunctions)
 
 # Set a color palette for species
 cols <- brewer.pal(8, "Dark2")
@@ -169,6 +170,8 @@ for (sp in 1:length(unique(grow$Species))){
        xlab=NA, ylab="Leaf Area (cm2)",
        main=focsp, las=2)
   
+  mtext(LETTERS[sp], 3, -1.5, at=as.Date("2019-6-10"))
+  
   for(i in 1:length(unique(tmpdat$Order))){
     focdat <- tmpdat[tmpdat$Order == unique(tmpdat$Order)[i],]
     focdat <- focdat[!is.na(focdat$Leaf_area),]
@@ -186,13 +189,24 @@ for (sp in 1:length(unique(grow$Species))){
   
   # Add a legend to the panel with CECSCH (it fits best here)
   if (focsp=="CECSCH"){
-    legend("topright", legend=c("High","Mid","Low"), 
-           col=brewer.pal(10, "Spectral")[c(9,5,2)], 
-           bty="n", lty=1, lwd=2, title="Soil Moisture")
+    # legend("topright", legend=c("High","Mid","Low"), 
+    #        col=brewer.pal(10, "Spectral")[c(10,5,1)], 
+    #        bty="n", lty=1, lwd=2, title="Soil Moisture")
+
+    plotfunctions::gradientLegend(
+      round(range(grow$Moisture),0),
+      n.seg=1,
+      color = brewer.pal(10, "Spectral"),
+      pos=c(as.Date("2019-11-1"), 22, as.Date("2019-11-20"), 32), coords=TRUE,
+      dec=0, border.col = NA, fit.margin = F
+    )
+    text(as.Date("2019-11-15"), 33.5, "Soil", cex=0.8, font=2, pos=3)
+    text(as.Date("2019-11-15"), 32, "Moisture %", cex=0.8, font=2, pos=3)
   }
 }
 
 dev.off()
+
 
 ###########################################
 ### Plot Effects on Survival and Growth ###
@@ -229,7 +243,7 @@ par(mfcol=c(1,2), mar=c(5,5,3,0.5))
 plot(0:50, ylim=c(0,100), pch=NA,
      xlab="Soil Moisture (%)", 
      ylab="Pred. Survival (%)")
-mtext("Survival", 3, 1)
+mtext("A", 3, -1.5, at=3, cex=1.5)
 for(i in 1:length(pred_moist)){
   lty <- ifelse(sum(t1[t1$Variable=='Moisture', c("2.5 %","97.5 %")][i,]>=0)!=1, 1, 2)
   lwd <- ifelse(sum(t1[t1$Variable=='Moisture', c("2.5 %","97.5 %")][i,]>=0)!=1, 3, 2)
@@ -238,8 +252,8 @@ for(i in 1:length(pred_moist)){
 
 plot(0:50, ylim=c(-0.75,1.5), pch=NA,
      xlab="Soil Moisture (%)", 
-     ylab=bquote("Pred. Growth (cm"^2~"day"^-1*")"))
-mtext("Growth", 3, 1)
+     ylab=bquote("Pred. Leaf Area Growth (cm"^2~"day"^-1*")"))
+mtext("B", 3, -1.5, at=50, cex=1.5)
 polygon(c(-10,70,70,-10), c(0,0,-2,-2), col='grey', lty=0)
 box()
 for(i in seq_along(levels(growdf$species))){
@@ -340,7 +354,7 @@ dev.off()
 ############################################################################
 ### Linear regressions for individual traits vs. soil moisture (LOGGED!) ###
 ############################################################################
-pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/FigureS3.pdf", height=9, width=8)
+pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/FigureS4.pdf", height=9, width=8)
 
 par(mfrow=c(6,4), mar=c(1,4,0.25,0.25), oma=c(3,0,0.5,0))
 
@@ -429,10 +443,11 @@ par(mfrow=c(1,2))
 plot(trait$Moisture, trait$PCA1, pch=16,
      col=cols[trait$Species], xlim=c(0,50), cex=0.5,
      xlab="Soil Moisture (%)",
-     ylab="PCA 1")
+     ylab="PC Dim 1")
+mtext("A", 3, -1.2, at=3, cex=1.25)
 for(sp in 1:8){
   spdat <- trait[trait$Species==levels(trait$Species)[sp],]
-  if(sum(!is.na(spdat[,i]))>5){
+  if(sum(!is.na(spdat$PCA1))>5){
     fit <- lm(spdat$PCA1 ~ spdat$Moisture)
     if(summary(fit)$coefficients[2,4] <= 0.05){
       abline(fit, col=cols[sp], lwd=2)
@@ -446,10 +461,11 @@ legend('bottomleft', legend=levels(trait$Species),
 plot(trait$Moisture, trait$PCA2, pch=16, 
      col=cols[trait$Species], xlim=c(0,50), cex=0.5,
      xlab="Soil Moisture (%)",
-     ylab="PCA 2")
+     ylab="PC Dim 2")
+mtext("B", 3, -1.2, at=3, cex=1.25)
 for(sp in 1:8){
   spdat <- trait[trait$Species==levels(trait$Species)[sp],]
-  if(sum(!is.na(spdat[,i]))>5){
+  if(sum(!is.na(spdat$PCA2))>5){
     fit <- lm(spdat$PCA2 ~ spdat$Moisture)
     if(summary(fit)$coefficients[2,4] <= 0.05){
       abline(fit, col=cols[sp], lwd=2)
@@ -478,9 +494,10 @@ plot(-t1$beta[t1$Variable=='Moisture'],
      ylim=c(-6,6),
      cex=2,
      xlab="Moisture effect on Survival",
-     ylab="PCA1")
+     ylab="PC Dim 1")
 legend('topright', legend=levels(surv$Species),
-       cex=0.5, bty='n', pch=21, pt.bg = cols, pt.cex=1)
+       cex=0.75, bty='n', pch=21, pt.bg = cols, pt.cex=1)
+mtext("A", 3, -1.2, at=-0.01)
 segments(-t1$`2.5 %`[t1$Variable=='Moisture'], 
          tapply(trait$PCA1, trait$Species, mean, na.rm=T),
          -t1$`97.5 %`[t1$Variable=='Moisture'], 
@@ -499,10 +516,9 @@ plot(as.numeric(as.character(t2$Estimate[t2$Variable=='Moisture'])),
      xlim=c(-0.005,.05),
      ylim=c(-6,5),
      cex=2,
-     xlab="Moisture effect on Growth",
-     ylab="PCA1")
-legend('topright', legend=levels(surv$Species),
-       cex=0.5, bty='n', pch=21, pt.bg = cols, pt.cex=1)
+     xlab="Moisture effect on LA Growth",
+     ylab="PC Dim 1")
+mtext("B", 3, -1.2, at=-0.0045)
 segments(t2$`2.5 %`[t2$Variable=='Moisture'], 
          tapply(trait$PCA1, trait$Species, mean, na.rm=T),
          t2$`97.5 %`[t2$Variable=='Moisture'], 
@@ -522,9 +538,8 @@ plot(-t1$beta[t1$Variable=='Moisture'],
      ylim=c(-4,5),
      cex=2,
      xlab="Moisture effect on Survival",
-     ylab="PCA2")
-legend('topright', legend=levels(surv$Species),
-       cex=0.5, bty='n', pch=21, pt.bg = cols, pt.cex=1)
+     ylab="PC Dim 1")
+mtext("C", 3, -1.2, at=-0.01)
 segments(-t1$`2.5 %`[t1$Variable=='Moisture'], 
          tapply(trait$PCA2, trait$Species, mean, na.rm=T),
          -t1$`97.5 %`[t1$Variable=='Moisture'], 
@@ -543,10 +558,9 @@ plot(as.numeric(as.character(t2$Estimate[t2$Variable=='Moisture'])),
      xlim=c(-0.005,.05),
      ylim=c(-3,5),
      cex=2,
-     xlab="Moisture effect on Growth",
-     ylab="PCA2")
-legend('topright', legend=levels(surv$Species),
-       cex=0.5, bty='n', pch=21, pt.bg = cols, pt.cex=1)
+     xlab="Moisture effect on LA Growth",
+     ylab="PC Dim 2")
+mtext("D", 3, -1.2, at=-0.0045)
 segments(t2$`2.5 %`[t2$Variable=='Moisture'], 
          tapply(trait$PCA2, trait$Species, mean, na.rm=T),
          t2$`97.5 %`[t2$Variable=='Moisture'], 
