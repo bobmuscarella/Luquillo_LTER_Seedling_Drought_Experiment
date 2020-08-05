@@ -20,10 +20,13 @@ require(ggplot2)
 require(factoextra)
 require(vegan)
 require(plotfunctions)
+require(dplyr)
 
 
 ### READ DATA FROM GITHUB
 path <- "https://raw.github.com/bobmuscarella/Luquillo_LTER_Seedling_Drought_Experiment/master/Data/"
+
+moisture <- read.csv(paste0(path, "LUQ_DroughtExp_Soil_moisture_complete.csv"))
 
 grow <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_growth.csv"))
 grow$Date <- as.Date(as.character(grow$Date), format="%m/%d/%y")
@@ -59,6 +62,47 @@ extract_coxme_table <- function (mod){
   table = data.frame(cbind(beta, se, z, p))
   return(table)
 }
+
+####################################################
+### Figure of soil moisture through time by plot ###
+####################################################
+
+moist_summary <- moisture %>% group_by(Plot) %>% summarize_each(funs=mean)
+
+### Remove one survey where plots had been mixed up in the data
+moist_summary <- moist_summary[,-7]
+
+moist_summary$Treatment <- moisture$Treatment[match(moist_summary$Plot, moisture$Plot)]
+
+labs <- as.Date(c("2019-05-31",
+                  "2019-06-18",
+                  "2019-07-1",
+                  "2019-07-15",
+                  # "2019-07-29",
+                  "2019-08-15",
+                  "2019-08-26",
+                  "2019-09-09",
+                  "2019-09-23",
+                  "2019-10-23",
+                  "2019-11-22",
+                  "2019-12-05",
+                  "2020-01-04"))
+
+pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/FigureS0_Soil_Moisture_through_time.pdf")
+
+plot(labs, moist_summary[1,3:ncol(moist_summary)], pch=NA, ylim=c(0,55),
+     las=2, xlab="Month", ylab='Soil Moisture %')
+
+for(i in 1:nrow(moist_summary)){
+  lines(labs, moist_summary[i,3:ncol(moist_summary)], 
+        col=ifelse(moist_summary$Treatment[i]=='D', 2, 4))
+}
+
+legend('topleft', legend = c("Control","Drought"), 
+       lty=1, col=c(4,2), bty='n', lwd=3)
+
+dev.off()
+
 
 ######################################################################################
 ### Figure of individual growth trajectories over time with soil moisture and mortality ###
