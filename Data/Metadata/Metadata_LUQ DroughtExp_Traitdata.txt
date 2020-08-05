@@ -1,0 +1,46 @@
+### METADATA for LUQDrought_RootTraitData_2020-06-04.xlsx
+
+## Data collected by Roel lammerant, J. Aaron Hogan & Robert Muscarella, January-february 2020, El Verde, Puerto Rico - in collaboration with Jess Zimmerman, Maria Uriate & David Matlaga.
+## correspondence concerning these data should be directed to Roel Lammerant (Roel.lammerant@outlook.be).
+
+## Description: 
+Destructuvily harvesting of all the survivin seedlings in a seedling drought experiment in Luquillo, Puerto Rico.  
+The experiment was located near the El Verde Field Station, in the Luquillo Experimental Forest, and utilized PVC plastic rain-out shelters. 
+Data were collected through the use of high precision scales, a flatbed scanner (CanoScan Lide 400), WinRHIZO and imageJ (Rueden et al. 2017)
+
+## Metadata are in the form of: # Variable - description with units
+
+# Variable list:
+
+# Plot # - The plot number where the seedling was located, ranges from 1-60
+# Position - The position in the 4x4 planted grid of seedlings within the plot, from 1 being top left to 16 being bottom right seedlings were numbered consecutively across in rows
+# Species name - An eight level factor for denoting the six letter code of the species.  Codes are as follows: CECSCH - Cecropia schreberiana Miq. (Urticacee) , GUAGUI - Guarea guidonia (L.) Sleumer (Meliaceae),  INLAU - Inga laurina (Sw.) Willd. (Leguminosae), MANBID - Manilkara bidentata (A.DC.) A.Chev. (Sapotaceae), PREMON -  Prestoea acuminata var. montana (Graham) A.J.Hend. & Galeano (Arecaceae), SCHMOR- Schefflera morototoni (Aubl.) Maguire, Steyerm. & Frodin (Araliaceae),  TETBAL - Tetragastris balsamifera (Sw.) Oken (Burseraceae), UREBAC - Urera baccifera (L.) Gaudich. ex Wedd. (Urticaceae).
+# Moisture - Mean soil moisture levels for each plot, from the period June 2019 until January 2020
+# RootDryMass(g) - Drymass weight of the total root system in g
+# Scan - The scan from each seedlings root system that was used to collect the root trait data
+# Root depth(cm) - Maximum rooting depth in cm
+# Length(cm) - Total length of the root system in cm
+# SurfArea(cm2) - Total surface area of the root system in cm^2
+# AvgDiam(mm) - Average root diameter of the root system in mm
+# RootVolume(cm3) - Total root volume of the root system in cm^3
+# Tips - Total amount of tips in a root system
+# Forks - Total amount of forks in a root system
+# SRL(cm/g) - Specific root length. The ratio of root length to dry mass of the root system in cm/g
+# SRA(cm2/g) - Specific root area. The ratio of root area to dry mass of the root system in cm^2/g
+# RTD(g/cm3) - Root tissue density. The ratio of root dry mass to root volume in g/cm^3
+# SRTA (tips/g) - Specific root tip area. The ratio of total amount of root tips to dry mass of the root system in tips/g
+# Stem density (g/cm3) - The ratio of stem dry mass to to stem voulme in g/cm^3
+# Stem dry mass (g) - Dry mass weight of the stem in g
+# Leaf dry mass (g) - Dry mass weight of the leaves in g
+# Leaf area (cm2) - Total leaf area in cm^2
+# Leaf thick 1 (mm) - leaf thickness measurement 1 in mm
+# Leaf thick 2 (mm) - leaf thickness measurement 2 in mm
+# Leaf thick 3 (mm) - leaf thickness measurement 3 in mm
+# LMA (g/m2) - Leaf mass per area. The ratio of leaf mass to leaf area in g/m^2
+# LDMC (%) - Leaf dry matter content. The ratio of leaf dry mass to leaf fresh mass in %
+# WDMC (%) - Wood dry matter content. The ratio of stem dry mass to stem fresh mass in %
+# RDMC (%) - Root dry matter content. The ratio of root dry mass to root fresh mass in %
+
+
+
+
