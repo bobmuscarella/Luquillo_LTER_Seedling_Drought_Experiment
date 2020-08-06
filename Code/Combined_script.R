@@ -52,6 +52,11 @@ nutrient <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_leafnutrients.csv"))
 nutrient$Species <- factor(nutrient$Species, levels = levels(grow$Species))
 nutrient$ID <- paste(nutrient$Plot, nutrient$Position, sep = '.')
 
+# Pre-dawn water potential data
+pdwp <- 
+  
+  
+
 
 ### SET A COLOR PALETTE TO IDENTIFY SPECIES
 cols <- brewer.pal(8, "Dark2")
@@ -699,3 +704,73 @@ t3 <- t3[grepl("Moisture", rownames(t3)),]
 rownames(t3) <- NULL
 
 write.csv(t3, "/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Tables/TableS1_WUE_fits.csv", row.names = F)
+
+
+
+
+
+########################################
+### Look at PRE DAWN WATER POTENTIAL ###
+########################################
+
+# Pre-dawn leaf water potential measurements from some seedlings
+wp <- read.csv(paste0(path, "LUQ_DroughtExp_WaterPotential.csv"))
+
+# Remove a dying plant
+wp <- wp[!wp$Notes %in% 'Seedling dying',]
+
+# Get mean value per plant of PLWP (of several measurements made per plant)
+wp$WP_mean <- apply(wp[,-c(1:2, 7:8)], 1, mean, na.rm=T)
+
+# Add other variables to water potential data 
+wp$ID <- paste(wp$Plot, wp$Position, sep=".")
+wp$Species <- as.factor(grow$Species[match(wp$ID, grow$ID)])
+wp$Moisture <- grow$Moisture[match(wp$ID, grow$ID)]
+
+
+### PLOT IT!!!
+
+pdf(paste0(figpath, "FigureSx_water_potential.pdf"))
+
+par(mfrow=c(1,1), mar=c(5,5,1,1))
+
+plot(wp$Moisture, wp$WP_mean, 
+     pch=16, col=scales::alpha(cols[wp$Species], 0.6), 
+     cex=1.5,  xlim=c(0,45),
+     ylab=bquote(Psi['PLWP']~(MPa)),
+     xlab='Soil moisture (%)', cex.lab=1.25)
+points(tapply(wp$Moisture, wp$Plot, mean, na.rm=T), 
+       tapply(wp$WP_mean, wp$Plot, mean, na.rm=T),
+       pch=25, lwd=3, cex=1.5)
+
+legend('topleft', legend=levels(wp$Species),
+       pch=16, col=cols[1:8], bty='n', pt.cex = 1.5)
+
+# abline(lm(tapply(wp$WP_mean, wp$Plot, mean, na.rm=T) ~ 
+#             tapply(wp$Moisture, wp$Plot, mean, na.rm=T)), lwd=5)
+
+# Remove a record for which species is ambiguous (position is '18' which doesn't exist)
+wp <- droplevels(wp[!is.na(wp$Species),])
+
+# for(i in levels(wp$Species)){
+#   tmp <- wp[wp$Species %in% i,]
+#   if(nrow(tmp)>2){
+#     mod <- lm(tmp$WP_mean ~ tmp$Moisture)
+#     lty <- ifelse(summary(mod)$coef[2,4] < 0.05, 1, 2)
+#     lwd <- ifelse(summary(mod)$coef[2,4] < 0.05, 3, 1)
+#     abline(mod, col=cols[which(i == levels(wp$Species))], lwd=lwd, lty=lty)
+#     print(paste(i, round(cor.test(tmp$Moisture, tmp$WP_mean, use='c')$est, 2)))
+#   }
+# }
+
+dev.off()
+
+
+
+
+
+
+
+
+
+
