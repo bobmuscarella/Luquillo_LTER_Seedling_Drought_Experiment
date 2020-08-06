@@ -12,37 +12,43 @@
 require(survival)
 require(survminer)
 require(coxme)
-require(ggplot2)
-require(RColorBrewer)
 require(lme4)
-require(scales)
-require(ggplot2)
 require(factoextra)
 require(vegan)
 require(plotfunctions)
+require(ggplot2)
+require(RColorBrewer)
+require(scales)
 require(dplyr)
 
 
 ### READ DATA FROM GITHUB
 path <- "https://raw.github.com/bobmuscarella/Luquillo_LTER_Seedling_Drought_Experiment/master/Data/"
 
-moisture <- read.csv(paste0(path, "LUQ_DroughtExp_Soil_moisture_complete.csv"))
+# Full soil moisture measurements
+moist <- read.csv(paste0(path, "LUQ_DroughtExp_Soil_moisture_complete.csv"))
 
+# Growth data
 grow <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_growth.csv"))
 grow$Date <- as.Date(as.character(grow$Date), format="%m/%d/%y")
 grow$ID <- paste(grow$Plot, grow$Position, sep = '.')
 
+# Survival data
 surv <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_survival.csv"))
 surv$ID <- paste(surv$Plot, surv$Position, sep = '.')
 
+# Trait data
 trait <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_traits.csv"))
 trait$ID <- paste(trait$Plot, trait$Position, sep = '.')
 
+# Photosynthesis data
 # photo <- read.csv(paste0(path, "LUQ_DroughtExp_Survey_photosynthesis.csv"))
 # photo$ID <- paste(photo$Plot, photo$Position, sep = '.')
 
+# Nutrient data
 nutrient <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_leafnutrients.csv"))
-# Add empty factor levels to keep species order consistent
+# Add empty factor levels to keep species order consistent with other datasets 
+# (Because not all species were included in the nutrient analysis)
 nutrient$Species <- factor(nutrient$Species, levels = levels(grow$Species))
 nutrient$ID <- paste(nutrient$Plot, nutrient$Position, sep = '.')
 
@@ -51,7 +57,7 @@ nutrient$ID <- paste(nutrient$Plot, nutrient$Position, sep = '.')
 cols <- brewer.pal(8, "Dark2")
 
 
-### HELPER FUNCTION to extract summary table from Cox ME models
+### LOAD HELPER FUNCTION (to extract summary table from Cox ME models)
 extract_coxme_table <- function (mod){
   beta <- mod$coefficients
   nvar <- length(beta)
@@ -63,16 +69,22 @@ extract_coxme_table <- function (mod){
   return(table)
 }
 
+
+### MAKE A PATH FOR SAVING FIGURES
+### (This needs to be changed for your own computer)
+figpath <- "/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/"
+
+
 ####################################################
 ### Figure of soil moisture through time by plot ###
 ####################################################
 
-moist_summary <- moisture %>% group_by(Plot) %>% summarize_each(funs=mean)
+### Get average moisture (from 4 measurements) per plot per time period
+moist_summary <- moist %>% group_by(Plot) %>% summarize_each(funs=mean)
+moist_summary$Treatment <- moist$Treatment[match(moist_summary$Plot, moist$Plot)]
 
-### Remove one survey where plots had been mixed up in the data
+### Remove one survey (July 29, 2019) where plots had been mixed up in the data
 moist_summary <- moist_summary[,-7]
-
-moist_summary$Treatment <- moisture$Treatment[match(moist_summary$Plot, moisture$Plot)]
 
 labs <- as.Date(c("2019-05-31",
                   "2019-06-18",
@@ -88,10 +100,11 @@ labs <- as.Date(c("2019-05-31",
                   "2019-12-05",
                   "2020-01-04"))
 
-pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/FigureS0_Soil_Moisture_through_time.pdf")
+pdf(paste0(figpath, "FigureS0_Soil_Moisture_through_time.pdf"))
 
-plot(labs, moist_summary[1,3:ncol(moist_summary)], pch=NA, ylim=c(0,55),
-     las=2, xlab="Month", ylab='Soil Moisture %')
+plot(labs, moist_summary[1,3:ncol(moist_summary)], 
+     pch=NA, ylim=c(0,55), las=2, 
+     xlab="Month", ylab='Soil Moisture %')
 
 for(i in 1:nrow(moist_summary)){
   lines(labs, moist_summary[i,3:ncol(moist_summary)], 
@@ -108,7 +121,7 @@ dev.off()
 ### Figure of individual growth trajectories over time with soil moisture and mortality ###
 ######################################################################################
 
-pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/Figure1.pdf", height=6, width=8)
+pdf(paste0(figpath, "Figure1.pdf"), height=6, width=8)
 
 # Color based on soil moisture in each plot
 grow$soil_col <- brewer.pal(10, "Spectral")[cut(grow$Moisture, 10)]
@@ -163,10 +176,10 @@ dev.off()
 ### Plot raw survival curves ###
 ################################
 
-pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/FigureS6.pdf", height=6, width=8)
+pdf(paste0(figpath, "FigureS6.pdf"), height=6, width=8)
 
 surv_curves_fit <- survfit(Surv(Days, Status) ~ Species, data = surv)  
-plot(surv_curves_fit, col=cols, lwd=2, axes=F, 
+plot(surv_curves_fit, col=cols, lwd=2, axes=F, xlim=c(0,250), 
      xlab="Days", ylab="Percent Surviving")
 legend('bottomleft', legend=levels(surv$Species),
        cex=0.7, bty='n', lty=1, col=cols, lwd=2)
@@ -237,14 +250,11 @@ for(i in unique(grow$Order)){
 
 # Fit the growth models
 grow_fits <- list()
-
 for(sp in 1:length(levels(growdf$species))){
   print(levels(growdf$species)[sp])
   tmpdf <- growdf[growdf$species %in% levels(growdf$species)[sp],]
-  
   grow_fits[[sp]] <- lmer(growth ~ moisture + densiometer + startsize 
                           + (1|plot), data=tmpdf)
-  
   names(grow_fits)[sp] <- levels(growdf$species)[sp]
 }
 
@@ -293,7 +303,7 @@ for (i in seq_along(levels(surv$Species))){
 }
 
 
-pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/Figure2.pdf", width=7, height=4)
+pdf(paste0(figpath, "/Figure2.pdf"), width=7, height=4)
 
 par(mfcol=c(1,2), mar=c(5,5,3,0.5))
 
@@ -335,7 +345,7 @@ dev.off()
 ### Plot the point estimates with 95% CIs ###
 #############################################
 
-pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/FigureS1.pdf", height=4, width=7)
+pdf(paste0(figpath, "FigureS1.pdf"), height=4, width=7)
 
 par(mfrow=c(1,2), mar=c(6,4,1,1), oma=c(0.5,0.5,2,0.5))
 
@@ -390,9 +400,9 @@ dev.off()
 ###############################################
 ### Box plots of individual (logged) traits ###
 ###############################################
-pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/FigureS2.pdf", height=9, width=8)
+pdf(paste0(figpath, "/FigureS2.pdf"), height=9, width=8)
 
-par(mfrow=c(6,4), mar=c(1,4,0.25,0.25), oma=c(3,0,0,0))
+par(mfrow=c(6,4), mar=c(1,4,0.25,0.25), oma=c(3,0,0.5,0))
 
 for(i in 1:24){
   column <- c(5:20,24:31)[i]
@@ -413,7 +423,7 @@ dev.off()
 ############################################################################
 ### Linear regressions for individual traits vs. soil moisture (LOGGED!) ###
 ############################################################################
-pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/FigureS4.pdf", height=9, width=8)
+pdf(paste0(figpath, "FigureS4.pdf"), height=9, width=8)
 
 par(mfrow=c(6,4), mar=c(1,4,0.25,0.25), oma=c(3,0,0.5,0))
 
@@ -447,7 +457,7 @@ dev.off()
 ### PCA with leaf and root traits ###
 #####################################
 
-### Remove urebac outlier
+### Remove one UREBAC outlier
 trait <- trait[trait$Plot!=12 & trait$Position!=11,]
 
 ### PCA with leaf and root traits
@@ -485,11 +495,10 @@ PCAplot1 <- ggarrange(a1, b1, ncol = 2, nrow = 1)
 ########################
 ### Plot PCA Results ###
 ########################
-# pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/Figure3.pdf", height=5, width=10)
+# pdf(paste0(figpath, "Figure3.pdf"), height=5, width=10)
 # PCAplot1
 # dev.off()
 ########################
-
 
 ### Contribution of variables
 tres.var <- get_pca_var(ord)
@@ -505,7 +514,7 @@ trait$PCA2 <- get_pca_ind(ord)$coord[,2]
 ### Plot PCA axis 1 and 2 vs. Soil Moisture ###
 ###############################################
 
-pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/FigureS3.pdf", height=5, width=10)
+pdf(paste0(figpath, "FigureS3.pdf"), height=5, width=10)
 
 par(mfrow=c(1,2))
 plot(trait$Moisture, trait$PCA1, pch=21,
@@ -551,7 +560,7 @@ dev.off()
 ### Plot PCA axis 1 and 2 vs. Soil Moisture effect on Survival and Growth ###
 #############################################################################
 
-pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/Figure4.pdf")
+pdf(paste0(figpath, "Figure4.pdf"))
 
 par(mfrow=c(2,2), mar=c(4,4,1,1))
 
@@ -651,7 +660,7 @@ dev.off()
 ### Look at change in WUE (Isotope data) ###
 ############################################
 
-pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/FigureS5.pdf")
+pdf(paste0(figpath, "FigureS5.pdf"))
 
 par(mar=c(5,5,1,1))
 plot(nutrient$Moisture, nutrient$iWUE_Lambers, pch=21,
@@ -681,12 +690,12 @@ for(sp in 1:8){
   }
 }
 
-t3 <- t3[grepl("Moisture", rownames(t3)),]
-rownames(t3) <- NULL
-t3
-
-write.csv(t3, "/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Tables/TableS1_WUE_fits.csv", row.names = F)
-
-
 
 dev.off()
+
+
+
+t3 <- t3[grepl("Moisture", rownames(t3)),]
+rownames(t3) <- NULL
+
+write.csv(t3, "/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Tables/TableS1_WUE_fits.csv", row.names = F)
