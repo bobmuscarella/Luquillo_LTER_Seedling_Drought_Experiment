@@ -671,7 +671,7 @@ par(mar=c(5,5,1,1))
 plot(nutrient$Moisture, nutrient$iWUE_Lambers, pch=21,
      bg=cols[nutrient$Species], xlim=c(2,45),
      xlab="Soil Moisture (%)",
-     ylab=bquote("i"*italic("WUE")~"("*mu~mol~mol^-1*")"))
+     ylab=bquote("i"*italic("WUE")~"("*plain(mu)~mol~mol^-1*")"))
 legend('topleft', legend=sort(unique(nutrient$Species)),
        cex=0.75, bty='n', pch=21, 
        pt.bg = cols[which(levels(nutrient$Species) %in% sort(unique(nutrient$Species)))], 
