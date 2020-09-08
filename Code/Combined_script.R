@@ -53,7 +53,7 @@ nutrient$Species <- factor(nutrient$Species, levels = levels(grow$Species))
 nutrient$ID <- paste(nutrient$Plot, nutrient$Position, sep = '.')
 
 # Pre-dawn water potential data
-pdwp <- 
+# pdwp <- 
   
   
 
