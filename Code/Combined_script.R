@@ -463,10 +463,10 @@ dev.off()
 #####################################
 
 ### Remove one UREBAC outlier
-trait <- trait[trait$Plot!=12 & trait$Position!=11,]
+trait <- trait[!(trait$Plot==12 & trait$Position==11),]
 
 ### PCA with leaf and root traits
-ord <- prcomp(~ LeafArea  +
+ord <- prcomp(~ LeafArea +
                 LMA +
                 LDMC +
                 LeafThicknessMean +
