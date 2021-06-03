@@ -32,14 +32,17 @@ moist <- read.csv(paste0(path, "LUQ_DroughtExp_Soil_moisture_complete.csv"))
 grow <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_growth.csv"))
 grow$Date <- as.Date(as.character(grow$Date), format="%m/%d/%y")
 grow$ID <- paste(grow$Plot, grow$Position, sep = '.')
+grow$Species <- as.factor(grow$Species)
 
 # Survival data
 surv <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_survival.csv"))
 surv$ID <- paste(surv$Plot, surv$Position, sep = '.')
+surv$Species <- as.factor(surv$Species)
 
 # Trait data
 trait <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_traits.csv"))
 trait$ID <- paste(trait$Plot, trait$Position, sep = '.')
+trait$Species <- as.factor(trait$Species)
 
 # Photosynthesis data
 # photo <- read.csv(paste0(path, "LUQ_DroughtExp_Survey_photosynthesis.csv"))
@@ -88,8 +91,17 @@ figpath <- "/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experime
 moist_summary <- moist %>% group_by(Plot) %>% summarize_each(funs=mean)
 moist_summary$Treatment <- moist$Treatment[match(moist_summary$Plot, moist$Plot)]
 
+moist_summary_min <- moist %>% group_by(Plot) %>% summarize_each(funs=min)
+moist_summary_min$Treatment <- moist$Treatment[match(moist_summary_min$Plot, moist$Plot)]
+
 ### Remove one survey (July 29, 2019) where plots had been mixed up in the data
 moist_summary <- moist_summary[,-7]
+moist_summary_min <- moist_summary_min[,-7]
+
+plot(apply(moist_summary[,-c(1:2)], 1, mean, na.rm=T), 
+     apply(moist_summary_min[,-c(1:2)], 1, min, na.rm=T))
+cor.test(apply(moist_summary[,-c(1:2)], 1, mean, na.rm=T), 
+         apply(moist_summary_min[,-c(1:2)], 1, min, na.rm=T))
 
 labs <- as.Date(c("2019-05-31",
                   "2019-06-18",
@@ -166,7 +178,12 @@ for (sp in 1:length(unique(grow$Species))){
       round(range(grow$Moisture),0),
       n.seg=1,
       color = brewer.pal(10, "Spectral"),
-      pos=c(as.Date("2019-11-1"), 22, as.Date("2019-11-20"), 32), coords=TRUE,
+      
+      pos=c(18200, 22, 
+            18220, 32), coords=TRUE,
+      
+      # pos=c(as.Date("2019-11-1"), 22, 
+      #       as.Date("2019-11-20"), 32), coords=TRUE,
       dec=0, border.col = NA, fit.margin = F
     )
     text(as.Date("2019-11-15"), 33.5, "Soil", cex=0.8, font=2, pos=3)
@@ -186,7 +203,7 @@ pdf(paste0(figpath, "FigureS6.pdf"), height=6, width=8)
 surv_curves_fit <- survfit(Surv(Days, Status) ~ Species, data = surv)  
 plot(surv_curves_fit, col=cols, lwd=2, axes=F, xlim=c(0,250), 
      xlab="Days", ylab="Percent Surviving")
-legend('bottomleft', legend=levels(surv$Species),
+legend('bottomleft', legend=sort(unique(surv$Species)),
        cex=0.7, bty='n', lty=1, col=cols, lwd=2)
 axis(2, at=seq(0,1,by=0.2), labels=seq(0,100,by=20))
 axis(1)
@@ -258,14 +275,17 @@ grow_fits <- list()
 for(sp in 1:length(levels(growdf$species))){
   print(levels(growdf$species)[sp])
   tmpdf <- growdf[growdf$species %in% levels(growdf$species)[sp],]
-  grow_fits[[sp]] <- lmer(growth ~ moisture + densiometer + startsize 
+  grow_fits[[sp]] <- lmer(growth ~ moisture + densiometer + moisture*densiometer + startsize 
                           + (1|plot), data=tmpdf)
   names(grow_fits)[sp] <- levels(growdf$species)[sp]
 }
 
 # Extract coefficients and compute confidence intervals
-Species <- rep(names(grow_fits), each=4)
-Variable <- rep(c("Intercept","Moisture","Densiometer","Start_size"), 8)
+# Species <- rep(names(grow_fits), each=4)
+# Variable <- rep(c("Intercept","Moisture","Densiometer","Start_size"), 8)
+Species <- rep(names(grow_fits), each=5)
+Variable <- rep(c("Intercept","Moisture","Densiometer","SM*Light","Start_size"), 8)
+
 Estimate <- round(do.call(c, lapply(grow_fits, fixef)),3)
 growcis <- do.call(rbind, lapply(grow_fits, function(x) round(confint(x)[-(1:2),],3)))
 
@@ -275,6 +295,51 @@ t2$`97.5 %` <- as.numeric(as.character(t2$`97.5 %`))
 rownames(t2) <- NULL
 
 write.csv(t2, "/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Tables/Table2_growth_summary.csv", row.names = F)
+
+
+grow_fits$INGLAU
+ndlolight <- data.frame(moisture=seq(0,100,length.out=100), 
+                      densiometer=rep(3, 100),
+                      startsize=rep(50,100))
+
+ndhilight <- data.frame(moisture=seq(0,100,length.out=100), 
+                      densiometer=rep(15, 100),
+                      startsize=rep(50,100),
+                      plot=rep(1,100))
+
+lolight_pred <- predict(grow_fits$INGLAU, newdata=ndlolight,  re.form=NA)
+hilight_pred <- predict(grow_fits$INGLAU, newdata=ndhilight,  re.form=NA)
+
+par(mfrow=c(2,2), mar=c(4,5,1,1))
+plot(seq(0,100,length.out=100), lolight_pred, type='l', 
+     ylim=range(c(hilight_pred, lolight_pred)), main='INGLAU', lwd=3,
+     xlab='Soil moisture (%)', ylab='Pred. growth')
+lines(seq(0,100,length.out=100), hilight_pred, col=2, lwd=3)
+legend('topleft', legend=c('Low light (3%)', 'High light (15%)'), 
+       lty=1, col=1:2, bty='n', lwd=3)
+
+
+
+
+ndlosm <- data.frame(moisture=rep(8, 100), 
+                        densiometer=seq(3,15,length.out=100),
+                        startsize=rep(50,100))
+
+ndhism <- data.frame(moisture=rep(40, 100), 
+                        densiometer=seq(3,15,length.out=100),
+                        startsize=rep(50,100),
+                        plot=rep(1,100))
+
+ndlosm_pred <- predict(grow_fits$INGLAU, newdata=ndlosm, re.form=NA)
+ndhism_pred <- predict(grow_fits$INGLAU, newdata=ndhism, re.form=NA)
+
+plot(seq(3,15,length.out=100), ndlosm_pred, type='l', 
+     ylim=range(c(ndlosm_pred, ndhism_pred)), main='INGLAU', lwd=3,
+     xlab='Canopy openness (%)', ylab='Pred. growth')
+lines(seq(3,15,length.out=100), ndhism_pred, col=2, lwd=3)
+legend('topleft', legend=c('Low moisture (8%)', 'High moisture (40%)'), 
+       lty=1, col=1:2, bty='n', lwd=3)
+
 
 
 
