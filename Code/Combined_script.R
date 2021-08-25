@@ -56,9 +56,7 @@ nutrient$Species <- factor(nutrient$Species, levels = levels(grow$Species))
 nutrient$ID <- paste(nutrient$Plot, nutrient$Position, sep = '.')
 
 # Pre-dawn water potential data
-# pdwp <- 
-  
-  
+# pdwp
 
 
 ### SET A COLOR PALETTE TO IDENTIFY SPECIES
@@ -117,7 +115,7 @@ labs <- as.Date(c("2019-05-31",
                   "2019-12-05",
                   "2020-01-04"))
 
-pdf(paste0(figpath, "FigureS0_Soil_Moisture_through_time.pdf"))
+# pdf(paste0(figpath, "FigureS0_Soil_Moisture_through_time.pdf"))
 
 plot(labs, moist_summary[1,3:ncol(moist_summary)], 
      pch=NA, ylim=c(0,55), las=2, 
@@ -131,14 +129,18 @@ for(i in 1:nrow(moist_summary)){
 legend('topleft', legend = c("Control","Drought"), 
        lty=1, col=c(4,2), bty='n', lwd=3)
 
-dev.off()
+# dev.off()
 
+
+min_moist <- apply(moist_summary_min[,-c(1:2)], 1, min, na.rm=T)
+names(min_moist) <- moist_summary_min$Plot
+grow$min_moist <- min_moist[match(grow$Plot, names(min_moist))]
 
 ######################################################################################
 ### Figure of individual growth trajectories over time with soil moisture and mortality ###
 ######################################################################################
 
-pdf(paste0(figpath, "Figure1.pdf"), height=6, width=8)
+# pdf(paste0(figpath, "Figure1.pdf"), height=6, width=8)
 
 # Color based on soil moisture in each plot
 grow$soil_col <- brewer.pal(10, "Spectral")[cut(grow$Moisture, 10)]
@@ -191,14 +193,14 @@ for (sp in 1:length(unique(grow$Species))){
   }
 }
 
-dev.off()
+# dev.off()
 
 
 ################################
 ### Plot raw survival curves ###
 ################################
 
-pdf(paste0(figpath, "FigureS6.pdf"), height=6, width=8)
+# pdf(paste0(figpath, "FigureS6.pdf"), height=6, width=8)
 
 surv_curves_fit <- survfit(Surv(Days, Status) ~ Species, data = surv)  
 plot(surv_curves_fit, col=cols, lwd=2, axes=F, xlim=c(0,250), 
@@ -208,7 +210,7 @@ legend('bottomleft', legend=sort(unique(surv$Species)),
 axis(2, at=seq(0,1,by=0.2), labels=seq(0,100,by=20))
 axis(1)
 
-dev.off()
+# dev.off()
 
 
 #########################
@@ -217,6 +219,7 @@ dev.off()
 
 ### Run species-by-species survival models in a loop
 surv_fits <- surv_fits_plot <- list()
+surv_fits_int <- list()
 options(na.action=na.exclude) # retain NA in predictions
 
 for (i in seq_along(levels(surv$Species))){
@@ -226,25 +229,41 @@ for (i in seq_along(levels(surv$Species))){
   # Run the models with plot random effect (we tested other random effects but AIC selected this)
   surv_fits[[i]] <- coxme(Surv(Days, Status) ~ Moisture + Densiometer + Start_LA
                              + (1|Plot), data=focdat)
+  surv_fits_int[[i]] <- coxme(Surv(Days, Status) ~ Moisture + Densiometer + Moisture*Densiometer
+                          + Start_LA + (1|Plot), data=focdat)
+  
+# Check likelihood ratio test and AIC to see if interaction is useful:  
+  x <- data.frame(cbind(do.call(rbind, lapply(surv_fits, AIC)),
+                   do.call(rbind, lapply(surv_fits_int, AIC))))
+  names(x) <- c("No interaction", "With interation")
+  x$deltaAIC <- x[,1] - x[,2]
+  
+  for(i in 1:8){
+    print(anova(surv_fits[[i]], surv_fits_int[[i]]))
+  }
+
+    
   # Run models without random effect in order to be able to plot predicted response
   # (not currently possible with coxme models)
-  surv_fits_plot[[i]] <- coxph(Surv(Days, Status) ~ Moisture + Densiometer + Start_LA, 
-                             data=focdat, model=T)
+  # surv_fits_plot[[i]] <- coxph(Surv(Days, Status) ~ Moisture + Densiometer + Moisture:Densiometer
+                               # + Start_LA, data=focdat, model=T)
+  surv_fits_plot[[i]] <- coxph(Surv(Days, Status) ~ Moisture + Densiometer + Moisture*Densiometer
+                               + Start_LA, data=focdat, model=T)
   
   # Name the items in the resulting list
   names(surv_fits)[i] <- levels(surv$Species)[i]
+  names(surv_fits_int)[i] <- levels(surv$Species)[i]
 }
 
 ### Make a summary table for survival model results
-t1 <- do.call(rbind, lapply(surv_fits, extract_coxme_table))
+t1 <- do.call(rbind, lapply(surv_fits_int, extract_coxme_table))
 t1 <- round(t1, 3)
 t1$Species <- unlist(lapply(strsplit(rownames(t1), "\\."), function(x)x[[1]]))
 t1$Variable <- unlist(lapply(strsplit(rownames(t1), "\\."), function(x)x[[2]]))
-t1 <- cbind(t1, round(do.call(rbind, lapply(surv_fits, confint)),3))
+t1 <- cbind(t1, round(do.call(rbind, lapply(surv_fits_int, confint)),3))
 t1 <- t1[,c("Species","Variable","beta","2.5 %", "97.5 %","se","z","p")]
 
-write.csv(t1, "/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Tables/Table1_survival_summary.csv", row.names = F)
-
+# write.csv(t1, "/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Tables/Table1_survival_summary.csv", row.names = F)
 
 ##############################################
 ### Growth analysis ##########################
@@ -292,12 +311,20 @@ growcis <- do.call(rbind, lapply(grow_fits, function(x) round(confint(x)[-(1:2),
 t2 <- as.data.frame(cbind(Species, Variable, Estimate, growcis))
 t2$`2.5 %` <- as.numeric(as.character(t2$`2.5 %`))
 t2$`97.5 %` <- as.numeric(as.character(t2$`97.5 %`))
+t2$sig <- sign(t2$`2.5 %`)==sign(t2$`97.5 %`)
 rownames(t2) <- NULL
 
-write.csv(t2, "/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Tables/Table2_growth_summary.csv", row.names = F)
+# write.csv(t2, "/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Tables/Table2_growth_summary.csv", row.names = F)
 
 
-grow_fits$INGLAU
+
+pdf("/Users/au529793/Desktop/growth_interactions.pdf", height=8, width=6)
+
+par(mfrow=c(4,2), mar=c(4,5,1,1))
+
+for(i in 1:length(grow_fits)){
+tmp <- grow_fits[[i]]
+
 ndlolight <- data.frame(moisture=seq(0,100,length.out=100), 
                       densiometer=rep(3, 100),
                       startsize=rep(50,100))
@@ -307,38 +334,38 @@ ndhilight <- data.frame(moisture=seq(0,100,length.out=100),
                       startsize=rep(50,100),
                       plot=rep(1,100))
 
-lolight_pred <- predict(grow_fits$INGLAU, newdata=ndlolight,  re.form=NA)
-hilight_pred <- predict(grow_fits$INGLAU, newdata=ndhilight,  re.form=NA)
+lolight_pred <- predict(tmp, newdata=ndlolight,  re.form=NA)
+hilight_pred <- predict(tmp, newdata=ndhilight,  re.form=NA)
 
-par(mfrow=c(2,2), mar=c(4,5,1,1))
 plot(seq(0,100,length.out=100), lolight_pred, type='l', 
-     ylim=range(c(hilight_pred, lolight_pred)), main='INGLAU', lwd=3,
-     xlab='Soil moisture (%)', ylab='Pred. growth')
+     ylim=range(c(hilight_pred, lolight_pred)), lwd=3,
+     xlab='Soil moisture (%)', ylab='Pred. growth', main=names(grow_fits)[i])
 lines(seq(0,100,length.out=100), hilight_pred, col=2, lwd=3)
 legend('topleft', legend=c('Low light (3%)', 'High light (15%)'), 
        lty=1, col=1:2, bty='n', lwd=3)
+}
 
-
-
-
-ndlosm <- data.frame(moisture=rep(8, 100), 
-                        densiometer=seq(3,15,length.out=100),
-                        startsize=rep(50,100))
-
-ndhism <- data.frame(moisture=rep(40, 100), 
-                        densiometer=seq(3,15,length.out=100),
-                        startsize=rep(50,100),
-                        plot=rep(1,100))
-
-ndlosm_pred <- predict(grow_fits$INGLAU, newdata=ndlosm, re.form=NA)
-ndhism_pred <- predict(grow_fits$INGLAU, newdata=ndhism, re.form=NA)
-
-plot(seq(3,15,length.out=100), ndlosm_pred, type='l', 
-     ylim=range(c(ndlosm_pred, ndhism_pred)), main='INGLAU', lwd=3,
-     xlab='Canopy openness (%)', ylab='Pred. growth')
-lines(seq(3,15,length.out=100), ndhism_pred, col=2, lwd=3)
-legend('topleft', legend=c('Low moisture (8%)', 'High moisture (40%)'), 
-       lty=1, col=1:2, bty='n', lwd=3)
+dev.off()
+# 
+# 
+# ndlosm <- data.frame(moisture=rep(8, 100), 
+#                         densiometer=seq(3,15,length.out=100),
+#                         startsize=rep(50,100))
+# 
+# ndhism <- data.frame(moisture=rep(40, 100), 
+#                         densiometer=seq(3,15,length.out=100),
+#                         startsize=rep(50,100),
+#                         plot=rep(1,100))
+# 
+# ndlosm_pred <- predict(grow_fits$INGLAU, newdata=ndlosm, re.form=NA)
+# ndhism_pred <- predict(grow_fits$INGLAU, newdata=ndhism, re.form=NA)
+# 
+# plot(seq(3,15,length.out=100), ndlosm_pred, type='l', 
+#      ylim=range(c(ndlosm_pred, ndhism_pred)), main='INGLAU', lwd=3,
+#      xlab='Canopy openness (%)', ylab='Pred. growth')
+# lines(seq(3,15,length.out=100), ndhism_pred, col=2, lwd=3)
+# legend('topleft', legend=c('Low moisture (8%)', 'High moisture (40%)'), 
+#        lty=1, col=1:2, bty='n', lwd=3)
 
 
 
@@ -349,31 +376,34 @@ legend('topleft', legend=c('Low moisture (8%)', 'High moisture (40%)'),
 
 # Predict survival as a function of soil moisture by species
 pred_moist <- list()
-# pred_light <- list()
-# pred_size <- list()
+pred_moist_lolight <- list()
+pred_moist_hilight <- list()
 
 for (i in seq_along(levels(surv$Species))){
   focdat <- surv[surv$Species %in% levels(surv$Species)[i],]
-  newdata_moist <- data.frame(Moisture = 0:50, 
+  newdata_moist <- data.frame(Moisture = 0:50,
                               Densiometer=mean(focdat$Densiometer),
                               Start_LA=mean(focdat$Start_LA, na.rm=T), Days=228, Status=1)
-  pred_moist[[i]] <- exp(-predict(surv_fits_plot[[i]], newdata=newdata_moist, type='expected'))
+  pred_moist[[i]] <- predict(surv_fits_plot[[i]], newdata=newdata_moist, type='survival')
   
-  ### Predictions across light and initial size (not used)
-  # newdata_light <- data.frame(Moisture=mean(focdat$Moisture),
-  #                             Densiometer=0:25,
-  #                             Start_LA=mean(focdat$Start_LA, na.rm=T), Days=228, Status=1)
-  # pred_light[[i]] <- exp(-predict(surv_fits_plot[[i]], newdata=newdata_light, type='expected'))
-  # newdata_size <- data.frame(Moisture=mean(focdat$Moisture),
-  #                            Densiometer=mean(focdat$Densiometer),
-  #                            Start_LA=seq(min(surv$Start_LA, na.rm=T), 
-  #                                       max(surv$Start_LA, na.rm=T), 
-  #                                       length.out = 51), Days=228, Status=1)
-  # pred_size[[i]] <- exp(-predict(surv_fits_plot[[i]], newdata=newdata_size, type='expected'))
+  newdata_moist_lolight <- data.frame(Moisture = 0:50,
+                              Densiometer=3,
+                              Start_LA=mean(focdat$Start_LA, na.rm=T), Days=228, Status=1)
+  pred_moist_lolight[[i]] <- predict(surv_fits_plot[[i]], newdata=newdata_moist_lolight, 
+                                     type='survival')
+  
+  newdata_moist_hilight <- data.frame(Moisture = 0:50,
+                              Densiometer=15,
+                              Start_LA=mean(focdat$Start_LA, na.rm=T), Days=228, Status=1)
+  pred_moist_hilight[[i]] <- predict(surv_fits_plot[[i]], newdata=newdata_moist_hilight, 
+                                     type='survival')
+  
+  names(pred_moist_hilight)[i] <- as.character(unique(focdat$Species))
+
 }
 
 
-pdf(paste0(figpath, "/Figure2.pdf"), width=7, height=4)
+# pdf(paste0(figpath, "/Figure2.pdf"), width=7, height=4)
 
 par(mfcol=c(1,2), mar=c(5,5,3,0.5))
 
@@ -409,6 +439,37 @@ legend('topleft', legend=levels(surv$Species),
        cex=0.7, bty='n', lty=1, col=cols, lwd=2)
 
 dev.off()
+
+
+
+
+
+
+pdf("/Users/au529793/Desktop/survival_interactions.pdf", height=8, width=6)
+
+par(mfrow=c(4,2), mar=c(4,5,1,1))
+
+for(i in 1:length(pred_moist_hilight)){
+  plot(0:50, ylim=c(0,100), pch=NA,
+     xlab="Soil Moisture (%)", 
+     ylab="Pred. Survival (%)", 
+     main=names(pred_moist_hilight)[i])
+  lines(0:50, 100*pred_moist_hilight[[i]], col=2, lwd=3)
+  lines(0:50, 100*pred_moist_lolight[[i]], col=1, lwd=3)
+  legend('topleft', legend=c('Low light (3%)', 'High light (15%)'), 
+         lty=1, col=1:2, bty='n', lwd=3)
+}
+
+dev.off()
+
+
+
+
+
+
+
+
+
 
 
 #############################################
