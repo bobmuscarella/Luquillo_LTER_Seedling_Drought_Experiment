@@ -76,11 +76,6 @@ extract_coxme_table <- function (mod){
 }
 
 
-### MAKE A PATH FOR SAVING FIGURES
-### (This needs to be changed for your own computer)
-figpath <- "/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/"
-
-
 ####################################################
 ### Figure of soil moisture through time by plot ###
 ####################################################
@@ -115,7 +110,7 @@ labs <- as.Date(c("2019-05-31",
                   "2019-12-05",
                   "2020-01-04"))
 
-# pdf(paste0(figpath, "FigureS0_Soil_Moisture_through_time.pdf"))
+# pdf("Figures/FigureS0_Soil_Moisture_through_time.pdf")
 
 plot(labs, moist_summary[1,3:ncol(moist_summary)], 
      pch=NA, ylim=c(0,55), las=2, 
@@ -140,7 +135,7 @@ grow$min_moist <- min_moist[match(grow$Plot, names(min_moist))]
 ### Figure of individual growth trajectories over time with soil moisture and mortality ###
 ######################################################################################
 
-# pdf(paste0(figpath, "Figure1.pdf"), height=6, width=8)
+# pdf("Figures/Figure1.pdf", height=6, width=8)
 
 # Color based on soil moisture in each plot
 grow$soil_col <- brewer.pal(10, "Spectral")[cut(grow$Moisture, 10)]
@@ -200,7 +195,7 @@ for (sp in 1:length(unique(grow$Species))){
 ### Plot raw survival curves ###
 ################################
 
-# pdf(paste0(figpath, "FigureS6.pdf"), height=6, width=8)
+# pdf("Figures/FigureS6.pdf", height=6, width=8)
 
 surv_curves_fit <- survfit(Surv(Days, Status) ~ Species, data = surv)  
 plot(surv_curves_fit, col=cols, lwd=2, axes=F, xlim=c(0,250), 
@@ -231,17 +226,6 @@ for (i in seq_along(levels(surv$Species))){
                              + (1|Plot), data=focdat)
   surv_fits_int[[i]] <- coxme(Surv(Days, Status) ~ Moisture + Densiometer + Moisture*Densiometer
                           + Start_LA + (1|Plot), data=focdat)
-  
-# Check likelihood ratio test and AIC to see if interaction is useful:  
-  x <- data.frame(cbind(do.call(rbind, lapply(surv_fits, AIC)),
-                   do.call(rbind, lapply(surv_fits_int, AIC))))
-  names(x) <- c("No interaction", "With interation")
-  x$deltaAIC <- x[,1] - x[,2]
-  
-  for(i in 1:8){
-    print(anova(surv_fits[[i]], surv_fits_int[[i]]))
-  }
-
     
   # Run models without random effect in order to be able to plot predicted response
   # (not currently possible with coxme models)
@@ -254,6 +238,18 @@ for (i in seq_along(levels(surv$Species))){
   names(surv_fits)[i] <- levels(surv$Species)[i]
   names(surv_fits_int)[i] <- levels(surv$Species)[i]
 }
+
+
+# Check AIC to see if interaction is useful:  
+x <- data.frame(cbind(do.call(rbind, lapply(surv_fits, AIC)),
+                      do.call(rbind, lapply(surv_fits_int, AIC))))
+names(x) <- c("No interaction", "With interation")
+x$deltaAIC <- x[,1] - x[,2]
+
+for(i in 1:8){
+  print(anova(surv_fits[[i]], surv_fits_int[[i]]))
+}
+
 
 ### Make a summary table for survival model results
 t1 <- do.call(rbind, lapply(surv_fits_int, extract_coxme_table))
@@ -403,7 +399,7 @@ for (i in seq_along(levels(surv$Species))){
 }
 
 
-# pdf(paste0(figpath, "/Figure2.pdf"), width=7, height=4)
+# pdf("Figures/Figure2.pdf", width=7, height=4)
 
 par(mfcol=c(1,2), mar=c(5,5,3,0.5))
 
@@ -476,7 +472,7 @@ dev.off()
 ### Plot the point estimates with 95% CIs ###
 #############################################
 
-pdf(paste0(figpath, "FigureS1.pdf"), height=4, width=7)
+pdf("Figures/FigureS1.pdf", height=4, width=7)
 
 par(mfrow=c(1,2), mar=c(6,4,1,1), oma=c(0.5,0.5,2,0.5))
 
@@ -531,7 +527,7 @@ dev.off()
 ###############################################
 ### Box plots of individual (logged) traits ###
 ###############################################
-pdf(paste0(figpath, "/FigureS2.pdf"), height=9, width=8)
+pdf("Figures/FigureS2.pdf"), height=9, width=8)
 
 par(mfrow=c(6,4), mar=c(1,4,0.25,0.25), oma=c(3,0,0.5,0))
 
@@ -554,7 +550,7 @@ dev.off()
 ############################################################################
 ### Linear regressions for individual traits vs. soil moisture (LOGGED!) ###
 ############################################################################
-pdf(paste0(figpath, "FigureS4.pdf"), height=9, width=8)
+pdf("Figures/FigureS4.pdf", height=9, width=8)
 
 par(mfrow=c(6,4), mar=c(1,4,0.25,0.25), oma=c(3,0,0.5,0))
 
@@ -626,7 +622,7 @@ PCAplot1 <- ggarrange(a1, b1, ncol = 2, nrow = 1)
 ########################
 ### Plot PCA Results ###
 ########################
-# pdf(paste0(figpath, "Figure3.pdf"), height=5, width=10)
+# pdf("Figures/Figure3.pdf", height=5, width=10)
 # PCAplot1
 # dev.off()
 ########################
@@ -645,7 +641,7 @@ trait$PCA2 <- get_pca_ind(ord)$coord[,2]
 ### Plot PCA axis 1 and 2 vs. Soil Moisture ###
 ###############################################
 
-pdf(paste0(figpath, "FigureS3.pdf"), height=5, width=10)
+pdf("Figures/FigureS3.pdf", height=5, width=10)
 
 par(mfrow=c(1,2))
 plot(trait$Moisture, trait$PCA1, pch=21,
@@ -691,7 +687,7 @@ dev.off()
 ### Plot PCA axis 1 and 2 vs. Soil Moisture effect on Survival and Growth ###
 #############################################################################
 
-pdf(paste0(figpath, "Figure4.pdf"))
+pdf("Figures/Figure4.pdf")
 
 par(mfrow=c(2,2), mar=c(4,4,1,1))
 
@@ -791,7 +787,7 @@ dev.off()
 ### Look at change in WUE (Isotope data) ###
 ############################################
 
-pdf(paste0(figpath, "FigureS5.pdf"))
+pdf("Figures/FigureS5.pdf")
 
 par(mar=c(5,5,1,1))
 plot(nutrient$Moisture, nutrient$iWUE_Lambers, pch=21,
@@ -856,7 +852,7 @@ wp$Moisture <- grow$Moisture[match(wp$ID, grow$ID)]
 
 ### PLOT IT!!!
 
-pdf(paste0(figpath, "FigureSx_water_potential.pdf"))
+pdf("Figures/FigureSx_water_potential.pdf")
 
 par(mfrow=c(1,1), mar=c(5,5,1,1))
 
