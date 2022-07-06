@@ -252,11 +252,11 @@ for(i in 1:8){
 
 
 ### Make a summary table for survival model results
-t1 <- do.call(rbind, lapply(surv_fits_int, extract_coxme_table))
+t1 <- do.call(rbind, lapply(surv_fits, extract_coxme_table))
 t1 <- round(t1, 3)
 t1$Species <- unlist(lapply(strsplit(rownames(t1), "\\."), function(x)x[[1]]))
 t1$Variable <- unlist(lapply(strsplit(rownames(t1), "\\."), function(x)x[[2]]))
-t1 <- cbind(t1, round(do.call(rbind, lapply(surv_fits_int, confint)),3))
+t1 <- cbind(t1, round(do.call(rbind, lapply(surv_fits, confint)),3))
 t1 <- t1[,c("Species","Variable","beta","2.5 %", "97.5 %","se","z","p")]
 
 # write.csv(t1, "/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Tables/Table1_survival_summary.csv", row.names = F)
@@ -286,23 +286,44 @@ for(i in unique(grow$Order)){
 }
 
 # Fit the growth models
-grow_fits <- list()
+grow_fits_int <- grow_fits <- grow_fits2 <- list()
 for(sp in 1:length(levels(growdf$species))){
   print(levels(growdf$species)[sp])
   tmpdf <- growdf[growdf$species %in% levels(growdf$species)[sp],]
-  grow_fits[[sp]] <- lmer(growth ~ moisture + densiometer + moisture*densiometer + startsize 
+  grow_fits_int[[sp]] <- lmer(growth ~ moisture + densiometer 
+                              + moisture*densiometer + startsize 
+                              + (1|plot) + (1|indv), data=tmpdf)
+
+  grow_fits[[sp]] <- lmer(growth ~ moisture + densiometer + startsize 
+                           + (1|plot) + (1|indv), data=tmpdf)
+  
+  grow_fits2[[sp]] <- lmer(growth ~ moisture + densiometer + startsize 
                           + (1|plot), data=tmpdf)
+  
+  names(grow_fits_int)[sp] <- levels(growdf$species)[sp]
   names(grow_fits)[sp] <- levels(growdf$species)[sp]
+  names(grow_fits2)[sp] <- levels(growdf$species)[sp]
 }
 
+aic_comp <- data.frame(no_int = unlist(lapply(grow_fits, AIC)),
+                       no_int2 = unlist(lapply(grow_fits2, AIC)),
+                       with_int = unlist(lapply(grow_fits_int, AIC)))
+
+# No support for including an interaction term
+aic_comp$no_int_preferred <- aic_comp$no_int < aic_comp$with_int
+aic_comp$no_indv_randeff_preferred <- aic_comp$no_int2 < aic_comp$no_int
+
+aic_comp
+
 # Extract coefficients and compute confidence intervals
-# Species <- rep(names(grow_fits), each=4)
-# Variable <- rep(c("Intercept","Moisture","Densiometer","Start_size"), 8)
-Species <- rep(names(grow_fits), each=5)
-Variable <- rep(c("Intercept","Moisture","Densiometer","SM*Light","Start_size"), 8)
+Species <- rep(names(grow_fits), each=4)
+Variable <- rep(c("Intercept","Moisture","Densiometer","Start_size"), 8)
+# Species <- rep(names(grow_fits), each=5)
+# Variable <- rep(c("Intercept","Moisture","Densiometer","SM*Light","Start_size"), 8)
 
 Estimate <- round(do.call(c, lapply(grow_fits, fixef)),3)
-growcis <- do.call(rbind, lapply(grow_fits, function(x) round(confint(x)[-(1:2),],3)))
+
+growcis <- do.call(rbind, lapply(grow_fits, function(x) round(confint(x)[-(1:3),],3)))
 
 t2 <- as.data.frame(cbind(Species, Variable, Estimate, growcis))
 t2$`2.5 %` <- as.numeric(as.character(t2$`2.5 %`))
@@ -310,8 +331,8 @@ t2$`97.5 %` <- as.numeric(as.character(t2$`97.5 %`))
 t2$sig <- sign(t2$`2.5 %`)==sign(t2$`97.5 %`)
 rownames(t2) <- NULL
 
-# write.csv(t2, "/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Tables/Table2_growth_summary.csv", row.names = F)
 
+# write.csv(t2, "/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Tables/Table2_growth_summary_20211103.csv", row.names = F)
 
 
 pdf("/Users/au529793/Desktop/growth_interactions.pdf", height=8, width=6)
@@ -527,9 +548,19 @@ dev.off()
 ###############################################
 ### Box plots of individual (logged) traits ###
 ###############################################
-pdf("Figures/FigureS2.pdf"), height=9, width=8)
+pdf("~/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/FigureS2_v2.pdf", height=9, width=8)
 
-par(mfrow=c(6,4), mar=c(1,4,0.25,0.25), oma=c(3,0,0.5,0))
+par(mfrow=c(6,4), mar=c(1,4,0.25,0.25), oma=c(5,0,0.5,0))
+
+splabs <- c("Cecropia schreberiana",
+            "Guarea guidonia",
+            "Inga laurina",
+            "Manilkara bidentata",
+            "Prestoea montana",
+            "schefflera morototoni",
+            "Tetragastris balsamifera",
+            "Urera baccifera")
+
 
 for(i in 1:24){
   column <- c(5:20,24:31)[i]
@@ -541,7 +572,8 @@ for(i in 1:24){
   mtext(colnames(trait)[column], 2, 2, cex=0.5)
   mtext(LETTERS[i], 3, -0.75, at=1, cex=0.75)
   if(column > 27){
-    axis(1, labels=levels(trait$Species), at=1:8, las=2, cex.axis=0.5)
+    # axis(1, labels=levels(trait$Species), at=1:8, las=2, cex.axis=0.5)
+    axis(1, labels=splabs, at=1:8, las=2, font=3, cex.axis=0.5)
   }
 }
 
@@ -787,14 +819,22 @@ dev.off()
 ### Look at change in WUE (Isotope data) ###
 ############################################
 
-pdf("Figures/FigureS5.pdf")
+pdf("Figures/FigureS5_v2.pdf")
 
 par(mar=c(5,5,1,1))
 plot(nutrient$Moisture, nutrient$iWUE_Lambers, pch=21,
-     bg=cols[nutrient$Species], xlim=c(2,45),
+     bg=cols[nutrient$Species], xlim=c(0,45),
      xlab="Soil Moisture (%)",
      ylab=bquote("i"*italic("WUE")~"("*plain(mu)~mol~mol^-1*")"))
-legend('topleft', legend=sort(unique(nutrient$Species)),
+
+splabs <- c("G. guidonia",
+            "I. laurina",
+            "M. bidentata",
+            "P. montana",
+            "S. morototoni",
+            "T. balsamifera")
+
+legend('bottomleft', legend=splabs, text.font=3, #sort(unique(nutrient$Species)),
        cex=0.75, bty='n', pch=21, 
        pt.bg = cols[which(levels(nutrient$Species) %in% sort(unique(nutrient$Species)))], 
        pt.cex=1.25, pt.lwd=1.25)
@@ -852,7 +892,7 @@ wp$Moisture <- grow$Moisture[match(wp$ID, grow$ID)]
 
 ### PLOT IT!!!
 
-pdf("Figures/FigureSx_water_potential.pdf")
+pdf("Figures/FigureSx_water_potential_v1.pdf")
 
 par(mfrow=c(1,1), mar=c(5,5,1,1))
 
@@ -865,28 +905,46 @@ points(tapply(wp$Moisture, wp$Plot, mean, na.rm=T),
        tapply(wp$WP_mean, wp$Plot, mean, na.rm=T),
        pch=25, lwd=3, cex=1.5)
 
-legend('topleft', legend=levels(wp$Species),
-       pch=16, col=cols[1:8], bty='n', pt.cex = 1.5)
+legend('topleft', legend=c("C. schreberiana",
+                           "G. guidonia",
+                           "I. laurina",
+                           "M. bidentata",
+                           "P. montana",
+                           "S. morototoni",
+                           "T. balsamifera"),
+       pch=16, col=cols[1:8], bty='n', pt.cex = 1.5, text.font=3, cex=0.8)
 
-# abline(lm(tapply(wp$WP_mean, wp$Plot, mean, na.rm=T) ~ 
-#             tapply(wp$Moisture, wp$Plot, mean, na.rm=T)), lwd=5)
-
-# Remove a record for which species is ambiguous (position is '18' which doesn't exist)
 wp <- droplevels(wp[!is.na(wp$Species),])
-
-# for(i in levels(wp$Species)){
-#   tmp <- wp[wp$Species %in% i,]
-#   if(nrow(tmp)>2){
-#     mod <- lm(tmp$WP_mean ~ tmp$Moisture)
-#     lty <- ifelse(summary(mod)$coef[2,4] < 0.05, 1, 2)
-#     lwd <- ifelse(summary(mod)$coef[2,4] < 0.05, 3, 1)
-#     abline(mod, col=cols[which(i == levels(wp$Species))], lwd=lwd, lty=lty)
-#     print(paste(i, round(cor.test(tmp$Moisture, tmp$WP_mean, use='c')$est, 2)))
-#   }
-# }
 
 dev.off()
 
+
+
+pdf("Figures/FigureSx_water_potential_v2.pdf")
+
+par(mfrow=c(1,1), mar=c(5,5,1,1))
+
+plot(wp$Moisture, wp$WP_mean, 
+     pch=16, col=scales::alpha(cols[wp$Species], 0.6), 
+     cex=1.5,  xlim=c(0,45),
+     ylab=bquote(Psi['PDWP']~(MPa)),
+     xlab='Soil moisture (%)', cex.lab=1.25)
+points(tapply(wp$Moisture, wp$Plot, mean, na.rm=T), 
+       tapply(wp$WP_mean, wp$Plot, mean, na.rm=T),
+       pch=25, lwd=3, cex=1.5)
+
+legend('topleft', legend=c("C. schreberiana",
+                           "G. guidonia",
+                           "I. laurina",
+                           "M. bidentata",
+                           "P. montana",
+                           "S. morototoni",
+                           "T. balsamifera"),
+       pch=16, col=cols[1:8], bty='n', pt.cex = 1.5, text.font=3, cex=0.8)
+
+wp <- droplevels(wp[!is.na(wp$Species),])
+
+dev.off()
 
 
 
