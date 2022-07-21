@@ -31,14 +31,15 @@ segments(-3.5, 0.5,
 
 # points(nd[which(round(ypred, 2)==0.50)[1],1], 0.5, pch=21, cex=2, lwd=2)
 
-text(0.65, 0.8, "Sensitivity", col=2, pos=4, font=2)
+text(0.65, 0.8, "β Demographic Rate", #"Sensitivity",
+     col=2, pos=4, font=2)
 
 text(0.65, 0.65, "Slope of relationship between 
 a given demographic rate 
 and soil moisture.", cex=0.8, col=2, pos=4)
 
 
-text(0.1, 0.25, "Tolerance", 
+text(0.1, 0.25, "Sur50", #"Tolerance", 
      pos=4, font=2, col=4)
 
 text(0.1, 0.1, "100 - Soil moisture 
