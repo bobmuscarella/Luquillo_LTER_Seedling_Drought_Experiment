@@ -121,6 +121,16 @@ for(i in 1:nrow(moist_summary)){
         col=ifelse(moist_summary$Treatment[i]=='D', 2, 4))
 }
 
+for(i in 1:nrow(moist_summary)){
+  lines(labs, moist_summary[i,3:ncol(moist_summary)], 
+        col=ifelse(moist_summary$Treatment[i]=='D', 2, 4))
+}
+
+
+cols
+order(apply(moist_summary[,-c(1:2)], 1, mean, na.rm=T))
+
+
 legend('topleft', legend = c("Control","Drought"), 
        lty=1, col=c(4,2), bty='n', lwd=3)
 
