@@ -121,16 +121,6 @@ for(i in 1:nrow(moist_summary)){
         col=ifelse(moist_summary$Treatment[i]=='D', 2, 4))
 }
 
-for(i in 1:nrow(moist_summary)){
-  lines(labs, moist_summary[i,3:ncol(moist_summary)], 
-        col=ifelse(moist_summary$Treatment[i]=='D', 2, 4))
-}
-
-
-cols
-order(apply(moist_summary[,-c(1:2)], 1, mean, na.rm=T))
-
-
 legend('topleft', legend = c("Control","Drought"), 
        lty=1, col=c(4,2), bty='n', lwd=3)
 
@@ -340,6 +330,10 @@ t2$`2.5 %` <- as.numeric(as.character(t2$`2.5 %`))
 t2$`97.5 %` <- as.numeric(as.character(t2$`97.5 %`))
 t2$sig <- sign(t2$`2.5 %`)==sign(t2$`97.5 %`)
 rownames(t2) <- NULL
+
+library(MuMIn)
+r.squaredGLMM(grow_fits[[1]])
+
 
 
 # write.csv(t2, "/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Tables/Table2_growth_summary_20211103.csv", row.names = F)
