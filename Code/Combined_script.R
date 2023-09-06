@@ -334,12 +334,10 @@ rownames(t2) <- NULL
 library(MuMIn)
 r.squaredGLMM(grow_fits[[1]])
 
-
-
 # write.csv(t2, "/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Tables/Table2_growth_summary_20211103.csv", row.names = F)
 
 
-pdf("/Users/au529793/Desktop/growth_interactions.pdf", height=8, width=6)
+# pdf("/Users/au529793/Desktop/growth_interactions.pdf", height=8, width=6)
 
 par(mfrow=c(4,2), mar=c(4,5,1,1))
 
@@ -466,7 +464,7 @@ dev.off()
 
 
 
-pdf("/Users/au529793/Desktop/survival_interactions.pdf", height=8, width=6)
+# pdf("/Users/au529793/Desktop/survival_interactions.pdf", height=8, width=6)
 
 par(mfrow=c(4,2), mar=c(4,5,1,1))
 
@@ -541,6 +539,23 @@ box()
 
 
 dev.off()
+
+
+
+
+
+
+grow_fits[[1]]@resp
+
+
+
+
+
+
+
+
+
+
 
 
 ######################################################
