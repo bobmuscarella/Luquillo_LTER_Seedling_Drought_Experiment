@@ -21,6 +21,8 @@ require(plotfunctions)
 require(RColorBrewer)
 require(scales)
 require(dplyr)
+library(brms)
+
 
 
 species_labs <- c("Cecropia schreberiana",
@@ -45,21 +47,25 @@ sp_labs <- c("C. schreberiana",
 path <- "https://raw.github.com/bobmuscarella/Luquillo_LTER_Seedling_Drought_Experiment/master/Data/"
 
 ### Full soil moisture measurements
-moist <- read.csv(paste0(path, "LUQ_DroughtExp_Soil_moisture_complete.csv"))
+# moist <- read.csv(paste0(path, "LUQ_DroughtExp_Soil_moisture_complete.csv"))
+moist <- read.csv("Data/LUQ_DroughtExp_Soil_moisture_complete.csv")
 
 # Growth data
-grow <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_growth.csv"))
+# grow <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_growth.csv"))
+grow <- read.csv("Data/LUQ_DroughtExp_Seedling_growth.csv")
 grow$Date <- as.Date(as.character(grow$Date), format="%m/%d/%y")
 grow$ID <- paste(grow$Plot, grow$Position, sep = '.')
 grow$Species <- as.factor(grow$Species)
 
 ### Survival data
-surv <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_survival.csv"))
+# surv <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_survival.csv"))
+surv <- read.csv("Data/LUQ_DroughtExp_Seedling_survival.csv")
 surv$ID <- paste(surv$Plot, surv$Position, sep = '.')
 surv$Species <- as.factor(surv$Species)
 
 ### Trait data
-trait <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_traits.csv"))
+# trait <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_traits.csv"))
+trait <- read.csv("Data/LUQ_DroughtExp_Seedling_traits.csv")
 trait$ID <- paste(trait$Plot, trait$Position, sep = '.')
 trait$Species <- as.factor(trait$Species)
 
@@ -68,11 +74,12 @@ trait$Species <- as.factor(trait$Species)
 # photo$ID <- paste(photo$Plot, photo$Position, sep = '.')
 
 ### Nutrient data
+nutrient <- read.csv("Data/LUQ_DroughtExp_Seedling_leafnutrients.csv")
 # nutrient <- read.csv(paste0(path, "LUQ_DroughtExp_Seedling_leafnutrients.csv"))
 # # Add empty factor levels to keep species order consistent with other datasets 
 # # (Because not all species were included in the nutrient analysis)
-# nutrient$Species <- factor(nutrient$Species, levels = levels(grow$Species))
-# nutrient$ID <- paste(nutrient$Plot, nutrient$Position, sep = '.')
+nutrient$Species <- factor(nutrient$Species, levels = levels(grow$Species))
+nutrient$ID <- paste(nutrient$Plot, nutrient$Position, sep = '.')
 
 # Pre-dawn water potential data
 # pdwp
@@ -129,11 +136,16 @@ labs <- as.Date(c("2019-05-31",
                   "2019-12-05",
                   "2020-01-04"))
 
-# pdf("Figures/FigureS0_Soil_Moisture_through_time.pdf")
+# pdf("Figures/FigureS2-treatment-effects-on-soil-moisture.pdf")
+
+mat <- matrix(c(1,2,1,3), nrow=2, ncol=2)
+layout(mat)
 
 plot(labs, moist_summary[1,3:ncol(moist_summary)], 
-     pch=NA, ylim=c(0,55), las=2, 
+     pch=NA, ylim=c(0,60), las=2, 
      xlab="Month", ylab='Soil Moisture %')
+
+mtext("A", adj=0.95, font=2)
 
 for(i in 1:nrow(moist_summary)){
   lines(labs, moist_summary[i,3:ncol(moist_summary)], 
@@ -143,12 +155,38 @@ for(i in 1:nrow(moist_summary)){
 legend('topleft', legend = c("Control","Drought"), 
        lty=1, col=c(4,2), bty='n', lwd=3)
 
+
+boxplot(rowMeans(moist_summary[,-c(1:2)]) ~ moist_summary$Treatment,
+        border=c(4,2), ylab="Mean soil moisture (%)", xlab="Moisture treatment", 
+        names=c("Control", "Drought"), 
+        col=scales::alpha(c(2,4), 0.5)[as.numeric(as.factor(moist_summary$Treatment))], 
+        ylim=c(0,50))
+
+mtext("B", adj=0.95, font=2)
+
+points(jitter(as.numeric(as.factor(moist_summary$Treatment))), rowMeans(moist_summary[,-c(1:2)]),
+       bg=c(4,2)[as.numeric(as.factor(moist_summary$Treatment))], pch=21)
+
+boxplot(apply(moist_summary[,-c(1:2)], 1, min, na.rm=T) ~ moist_summary$Treatment,
+        border=c(4,2), ylab="Mean soil moisture (%)", xlab="Moisture treatment", 
+        names=c("Control", "Drought"), 
+        col=scales::alpha(c(2,4), 0.5)[as.numeric(as.factor(moist_summary$Treatment))], 
+        ylim=c(0,50))
+
+mtext("C", adj=0.95, font=2)
+
+points(jitter(as.numeric(as.factor(moist_summary$Treatment))), 
+       apply(moist_summary[,-c(1:2)], 1, min, na.rm=T),
+       bg=c(4,2)[as.numeric(as.factor(moist_summary$Treatment))], pch=21)
+
+
 # dev.off()
 
 
 min_moist <- apply(moist_summary_min[,-c(1:2)], 1, min, na.rm=T)
 names(min_moist) <- moist_summary_min$Plot
 grow$min_moist <- min_moist[match(grow$Plot, names(min_moist))]
+
 
 # Get the 10% and 90%-iles of soil moisture from the data to use in defining sensitivity
 moist_percentiles <- quantile(moist_summary[,-c(1:2)], na.rm=T, probs=c(0.1, 0.9))
@@ -311,7 +349,7 @@ for(i in unique(grow$Order)){
 growdf$moisture.z <- scale(growdf$moisture)
 
 ### Fit the growth models
-grow_fits_int <- grow_fits <- grow_fits2 <- list()
+grow_fits_int <- grow_fits <- grow_fits.z <- grow_fits2 <- list()
 
 for(sp in 1:length(levels(growdf$species))){
   print(levels(growdf$species)[sp])
@@ -320,7 +358,7 @@ for(sp in 1:length(levels(growdf$species))){
   # With plot and individual random effects
   grow_fits[[sp]] <- lmer(growth ~ moisture + densiometer + startsize 
                            + (1|plot) + (1|indv), data=tmpdf)
-  
+
   # With plot random effect only
   grow_fits2[[sp]] <- lmer(growth ~ moisture + densiometer + startsize 
                            + (1|plot), data=tmpdf)
@@ -475,7 +513,7 @@ for (i in seq_along(levels(surv$Species))){
 
 
 
-# pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/Figure2_new.pdf", width=7, height=4)
+# pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/Figure2_20231201.pdf", width=7, height=4)
 
 par(mfcol=c(1,2), mar=c(5,5,3,0.5))
 
@@ -484,8 +522,13 @@ plot(0:50, ylim=c(0,100), pch=NA,
      ylab="Pred. Survival (%)")
 mtext("A", 3, -1.5, at=3, cex=1.5)
 for(i in 1:length(pred_moist)){
+  
   lty <- ifelse(sum(t1[t1$Variable=='Moisture', c("2.5 %","97.5 %")][i,]>=0)!=1, 1, 2)
-  points(0:50, 100*pred_moist[[i]], col=cols[i], type='l', lwd=3, lty=lty)
+  points(0:50, 100*pred_moist[[i]], col=cols[i], type='l', lwd=1, lty=lty)
+  
+  x <- 13:40
+  lines(x, 100*pred_moist[[i]][14:41], col=cols[i], type='l', lwd=3, lty=lty, lend=3)
+  
 }
 
 abline(v=moist_percentiles, lty=1, col='grey')
@@ -505,21 +548,25 @@ for(i in seq_along(levels(growdf$species))){
   lty <- ifelse(sum(t2[t2$Species==focsp & t2$Variable=='Moisture', c("2.5 %","97.5 %")]>=0)!=1, 1, 2)
   lwd <- ifelse(sum(t2[t2$Species==focsp & t2$Variable=='Moisture', c("2.5 %","97.5 %")]>=0)!=1, 3, 2)
   pred <- predict(grow_fits[[i]], newdata=newdata, re.form=NA, type='response')
-  points(0:50, pred, col=cols[i], type='l', lwd=lwd, lty=lty)
+  points(0:50, pred, col=cols[i], type='l', lwd=1, lty=lty)
+  
+  x <- 13:40
+  lines(x, pred[14:41], col=cols[i], type='l', lwd=3, lty=lty, lend=3)
 }
 
-segments(moist_percentiles[1], -10, moist_percentiles[1], 0.8, col='darkgrey')
+segments(moist_percentiles[1], -10, moist_percentiles[1], 0.1, col='darkgrey')
 abline(v=moist_percentiles[2], col='darkgrey')
 
 arrows(moist_percentiles[1], -0.5, moist_percentiles[2], -0.5, 
        len=0.1, code=3, lwd=1.5)
-text(mean(moist_percentiles), -0.43, 'Moisure percentiles
+text(mean(moist_percentiles), -0.35, 'Moisure percentiles
 (10% and 90%)', cex=0.5)
 
 legend('topleft', legend=sp_labs, text.font=3,
        cex=0.7, bty='n', lty=1, col=cols, lwd=2)
 
-dev.off()
+# dev.off()
+
 
 
 
@@ -603,38 +650,137 @@ for(i in 1:length(unique(surv$Species))){
 
 
 
-### COMPUTE VALUE OF SOIL MOISTURE WHERE SURVIVAL (ACROSS 0-100 SOIL MOISTURE) IS 50% MAX SURVIVAL
-surv_tol <- vector()
-for(sp in 1:8){
-  s50 <- max(smat[,sp]) - (max(smat[,sp]) - min(smat[,sp]))/2
-  surv_tol[sp] <- which.min(abs(smat[,sp] - s50))
-}
-names(surv_tol) <- levels(surv$Species)
-surv_tol
+
+# ### COMPUTE VALUE OF SOIL MOISTURE WHERE SURVIVAL (ACROSS 0-100 SOIL MOISTURE) IS 50% MAX SURVIVAL
+# surv_tol <- vector()
+# for(sp in 1:8){
+#   s50 <- max(smat[,sp]) - (max(smat[,sp]) - min(smat[,sp]))/2
+#   surv_tol[sp] <- which.min(abs(smat[,sp] - s50))
+# }
+# names(surv_tol) <- levels(surv$Species)
+# surv_tol
 
 # ### COMPUTE SURVIVAL TOLERANCE AS SURVIVAL AT LOW (ARBITRARY 15% SOIL MOISTURE)
 # surv_15 <- round(smat['15',], 3)
 
 ### COMPUTE SURVIVAL TOLERANCE AS SURVIVAL AT LOW (lower 10%-ile SOIL MOISTURE)
 round(moist_percentiles[1], 1)
-surv_tol <- round(smat['13.5',], 3)
+surv_tol <- round(smat[which(as.numeric(rownames(smat))==round(moist_percentiles[1],1)),], 3)
 
 ### COMPUTE GROWTH TOLERANCE AS GROWTH AT LOW (lower 10%-ile SOIL MOISTURE)
-grow_tol <- round(gmat['13.5',], 3)
+grow_tol <- round(gmat[which(as.numeric(rownames(gmat))==round(moist_percentiles[1],1)),], 3)
 
 ### COMPUTE SURVIVAL SENSITIVITY AS SURVIVAL AT HIGH minus LOW moisture (90%-ile minus 10%-ile SOIL MOISTURE)
 round(moist_percentiles, 1)
-surv_sens <- round(smat['39.1',] - smat['13.5',], 3)
+surv_sens <- round(smat[which(as.numeric(rownames(smat))==round(moist_percentiles[2],1)),] - 
+                     smat[which(as.numeric(rownames(smat))==round(moist_percentiles[1],1)),], 3)
 
 ### COMPUTE GROWTH SENSITIVITY AS GROWTH AT HIGH minus LOW moisture (90%-ile minus 10%-ile SOIL MOISTURE)
-grow_sens <- round(gmat['39.1',] - gmat['13.5',], 3)
+grow_sens <- round(gmat[which(as.numeric(rownames(gmat))==round(moist_percentiles[2],1)),] - 
+                     gmat[which(as.numeric(rownames(gmat))==round(moist_percentiles[1],1)),], 3)
 
-par(mfrow=c(2,2))
-plot(grow_tol, grow_sens, bg=cols, pch=21, cex=1.5)
-plot(surv_tol, surv_sens, bg=cols, pch=21, cex=1.5)
-plot(grow_tol, surv_tol, bg=cols, pch=21, cex=1.5)
-plot(grow_sens, surv_sens, bg=cols, pch=21, cex=1.5)
 
+
+
+
+################################################
+#### Compute CI's for tolerance and sensitivity metrics
+
+## GROWTH
+predFun <- function(fit) {
+  predict(fit, newdata=newdata, re.form=NA, type='response')
+}
+
+grow_tol_cis <- list()
+grow_sens_cis <- list()
+
+grow_tol_se <- vector()
+grow_sens_se <- vector()
+
+for(sp in 1:length(grow_fits)){
+  message(sp)
+  tmpdf <- growdf[growdf$species == names(grow_fits)[sp],]
+  newdata <- data.frame(moisture=moist_percentiles,
+                        densiometer=mean(tmpdf$densiometer),
+                        startsize=mean(tmpdf$startsize))
+  bb <- bootMer(grow_fits[[sp]], nsim=1000, FUN=predFun, use.u=FALSE)
+  
+  # Get CI's for growth tolerance
+  grow_tol_cis[[sp]] <- sort(bb$t[,1])[c(25, 500, 975)]
+  
+  # Get N for growth model
+  n <- nrow(tmpdf)
+  
+  # Get CI's for growth sensitivity
+  grow_sens_cis[[sp]] <- sort(bb$t[,2] - bb$t[,1])[c(25, 500, 975)]
+  
+  # convert 95% CIs to se
+  grow_tol_se[sp] <- (grow_tol_cis[[sp]][3] - grow_tol_cis[[sp]][1])/3.919928
+  grow_sens_se[sp] <- (grow_sens_cis[[sp]][3] - grow_sens_cis[[sp]][1])/3.919928
+}
+
+
+### SURVIVAL ### 
+surv_tol_v <- list()
+surv_tol_se <- vector()
+surv_sens_se <- vector()
+  
+for(sp in 1:length(surv_fits)){
+
+  tmpdf <- surv[surv$Species == names(surv_fits)[sp],]
+
+  newdata_moist <- data.frame(Moisture=moist_percentiles,
+                              Densiometer=mean(tmpdf$Densiometer),
+                              Start_LA=mean(tmpdf$Start_LA, na.rm=T), Days=228, Status=1)
+  
+  # Predict survival at the 2 moisture levels
+  surv_tol_v[[sp]] <- predict(surv_fits_plot[[sp]], newdata=newdata_moist, 
+                                       type='survival', se.fit=T)
+  
+  # Get SE of tolerance
+  surv_tol_se[sp] <- surv_tol_v[[sp]]$se.fit[1]
+  
+  # Convert to SD for subtraction
+  surv_tol_v[[sp]]$sd <- surv_tol_v[[sp]]$se.fit * sqrt(nrow(tmpdf))
+  
+  # Convert SD back to SE
+  surv_sens_se[[sp]] <- sqrt(sum(surv_tol_v[[sp]]$sd^2))/sqrt(120)
+  
+}
+
+
+
+
+
+### FIT MODELS WITH SE INCORPORATED
+x <- data.frame(surv_tol, surv_tol_se, surv_sens, surv_sens_se, 
+                grow_tol, grow_tol_se, grow_sens, grow_sens_se)
+
+# par(mfrow=c(2,3))
+# 
+# plot(grow_tol, grow_sens, bg=cols, pch=21, cex=1.5)
+# cor.test(grow_tol, grow_sens)
+# abline(lm(grow_sens ~ grow_tol))
+# 
+# plot(surv_tol, surv_sens, bg=cols, pch=21, cex=1.5)
+# cor.test(surv_tol, surv_sens)
+# abline(lm(surv_sens ~ surv_tol))
+# 
+# plot(grow_tol, surv_tol, bg=cols, pch=21, cex=1.5)
+# cor.test(grow_tol, surv_tol)
+# abline(lm(grow_sens ~ grow_tol))
+# 
+# plot(grow_sens, surv_sens, bg=cols, pch=21, cex=1.5)
+# cor.test(grow_sens, surv_sens)
+# abline(lm(grow_sens ~ surv_sens))
+# 
+# plot(grow_sens, surv_tol, bg=cols, pch=21, cex=1.5)
+# cor.test(grow_sens, surv_tol)
+# abline(lm(grow_sens ~ surv_tol))
+# 
+# plot(grow_tol, surv_sens, bg=cols, pch=21, cex=1.5)
+# cor.test(grow_tol, surv_sens)
+# abline(lm(surv_sens ~ grow_tol))
 
 
 
@@ -643,7 +789,6 @@ plot(grow_sens, surv_sens, bg=cols, pch=21, cex=1.5)
 # grow_15 <- round(gmat[16,], 3)
 # names(grow_15) <- levels(surv$Species)
 # grow_15
-
 
 # grow_beta <- as.numeric(t2$Estimate[t2$Variable=="Moisture"])
 # names(grow_beta) <- levels(surv$Species)
@@ -655,30 +800,25 @@ plot(grow_sens, surv_sens, bg=cols, pch=21, cex=1.5)
 
 
 
-
-
-par(mfrow=c(2,3), mar=c(4,4,1,1))
-
-plot(grow_sens, grow_tol, pch=16, col=cols, cex=1.5)
-cor.test(grow_sens, grow_tol)
-
-plot(surv_sens, surv_tol, pch=16, col=cols, cex=1.5)
-cor.test(surv_sens, surv_tol)
-
-plot(grow_sens, surv_sens, pch=16, col=cols, cex=1.5)
-cor.test(grow_sens, surv_sens)
-
-plot(grow_tol, surv_sens, pch=16, col=cols, cex=1.5)
-cor.test(grow_tol, surv_sens)
-
-plot(grow_sens, surv_tol, pch=16, col=cols, cex=1.5)
-cor.test(grow_sens, surv_tol)
-     
-plot(grow_tol, surv_tol, pch=16, col=cols, cex=1.5)
-cor.test(grow_tol, surv_tol)
-
-cor.test(grow_tol, surv_tol)
-cor.test(grow_sens, surv_sens)
+# par(mfrow=c(2,3), mar=c(4,4,1,1))
+# 
+# plot(grow_sens, grow_tol, pch=16, col=cols, cex=1.5)
+# cor.test(grow_sens, grow_tol)
+# 
+# plot(surv_sens, surv_tol, pch=16, col=cols, cex=1.5)
+# cor.test(surv_sens, surv_tol)
+# 
+# plot(grow_sens, surv_sens, pch=16, col=cols, cex=1.5)
+# cor.test(grow_sens, surv_sens)
+# 
+# plot(grow_tol, surv_sens, pch=16, col=cols, cex=1.5)
+# cor.test(grow_tol, surv_sens)
+# 
+# plot(grow_sens, surv_tol, pch=16, col=cols, cex=1.5)
+# cor.test(grow_sens, surv_tol)
+#      
+# plot(grow_tol, surv_tol, pch=16, col=cols, cex=1.5)
+# cor.test(grow_tol, surv_tol)
 
 
 
@@ -695,7 +835,7 @@ avg_surv <- round(100*(1-tapply(surv$Status, surv$Species, mean)),1)
 
 growdf <- growdf[order(growdf$species, growdf$id, growdf$interval),]
 
-### Get average survival by species
+### Get average growth by species
 g <- vector()
 for(i in 1:length(unique(growdf$id))){
   focdat <- growdf[growdf$id %in% unique(growdf$id)[i],]
@@ -703,11 +843,9 @@ for(i in 1:length(unique(growdf$id))){
   names(g)[i] <- as.character(focdat$species[1])
 }
 avg_grow <- tapply(g, names(g), mean)
-
-
+se_grow <- tapply(g, names(g), se)
 
 head(trait)
-
 
 # leaf area (cm2)
 # leaf mass per area (LMA; kg m-2)
@@ -828,8 +966,7 @@ adonis2(d ~ pctraits$Species)
 ##################################################################
 ### FIGURE OF ORDINATION
 ##################################################################
-pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/Figure3_v3.pdf",
-    width=8, height=4)
+# pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/Figure3_v3.pdf", width=8, height=4)
 
 par(mfrow=c(1,2), mar=c(4,4,1,1))
 plot(ord_new$scores[,1:2], pch=16, col="grey", cex=0.75, asp=1)
@@ -881,22 +1018,290 @@ legend('topleft', legend=sp_labs, text.font=3, bty='n', pch=21, pt.bg=cols, cex=
 mtext("B", 3, -1.25, adj=0.95, font=2)
 
 dev.off()
+
+
 ##################################################################
 ##################################################################
 
+# GET SE AROUND RC axes 
+tdat <- data.frame(rc1_med=tapply(ord_new$scores[,1], pctraits$Species, median),
+                   rc1_se=tapply(ord_new$scores[,1], pctraits$Species, se),
+                   rc2_med=tapply(ord_new$scores[,2], pctraits$Species, median),
+                   rc2_se=tapply(ord_new$scores[,2], pctraits$Species, se))
+
+# plot(tdat$rc1_med, surv_tol, ylim=c(-0.1, 1.1), xlim=c(-2.8, 1.3))
+# segments(tdat$rc1_med, surv_tol - surv_tol_se, tdat$rc1_med, surv_tol + surv_tol_se)
+# segments(tdat$rc1_med-tdat$rc1_se, surv_tol, tdat$rc1_med+tdat$rc1_se, surv_tol)
+
+xx <- cbind(x, tdat)
+
+# Average surv x traits
+xx$surv_avg <- avg_surv
+
+# Average growth x traits
+xx$grow_avg <- avg_grow
+xx$grow_se <- se_grow
+
+### MODELS OF CORRELATIONS BETWEEN DEMOGRAPHIC METRICS AND TRAIT AXES RC1 AND RC2
+# Survival tolerance x RC1
+fit_indiv_me_st_rc1 <- brm(surv_tol | resp_se(surv_tol_se, sigma = TRUE) ~
+                             me(rc1_med, rc1_se),
+                           data = xx,
+                           family = gaussian())
+
+# Survival tolerance x RC2
+fit_indiv_me_st_rc2 <- brm(surv_tol | resp_se(surv_tol_se, sigma = TRUE) ~
+                             me(rc2_med, rc2_se),
+                           data = xx,
+                           family = gaussian())
+
+# Survival sensitivity x RC1
+fit_indiv_me_ss_rc1 <- brm(surv_sens | resp_se(surv_sens_se, sigma = TRUE) ~
+                             me(rc1_med, rc1_se),
+                           data = xx,
+                           family = gaussian())
+
+# Survival sensitivity x RC2
+fit_indiv_me_ss_rc2 <- brm(surv_sens | resp_se(surv_sens_se, sigma = TRUE) ~
+                             me(rc2_med, rc2_se),
+                           data = xx,
+                           family = gaussian())
+
+# Growth tolerance x RC1
+fit_indiv_me_gt_rc1 <- brm(grow_tol | resp_se(grow_tol_se, sigma = TRUE) ~
+                             me(rc1_med, rc1_se),
+                           data = xx,
+                           family = gaussian())
+
+# Growth tolerance x RC2
+fit_indiv_me_gt_rc2 <- brm(grow_tol | resp_se(grow_tol_se, sigma = TRUE) ~
+                             me(rc2_med, rc2_se),
+                           data = xx,
+                           family = gaussian())
+
+# Growth sensitivity x RC1
+fit_indiv_me_gs_rc1 <- brm(grow_sens | resp_se(grow_sens_se, sigma = TRUE) ~
+                             me(rc1_med, rc1_se),
+                           data = xx,
+                           family = gaussian())
+
+# Growth sensitivity x RC2
+fit_indiv_me_gs_rc2 <- brm(grow_sens | resp_se(grow_sens_se, sigma = TRUE) ~
+                             me(rc2_med, rc2_se),
+                           data = xx,
+                           family = gaussian())
+
+# Average survival x RC1
+fit_indiv_me_avgsurv_rc1 <- brm(surv_avg ~
+                                  me(rc1_med, rc1_se),
+                                data = xx,
+                                family = gaussian())
+
+# Average survival x RC2
+fit_indiv_me_avgsurv_rc2 <- brm(surv_avg ~
+                                  me(rc2_med, rc2_se),
+                                data = xx,
+                                family = gaussian())
+
+# Average growth x RC1
+fit_indiv_me_avggrow_rc1 <- brm(grow_avg | resp_se(grow_se, sigma = TRUE) ~
+                             me(rc1_med, rc1_se),
+                           data = xx,
+                           family = gaussian())
+
+# Average growth x RC2
+fit_indiv_me_avggrow_rc2 <- brm(grow_avg | resp_se(grow_se, sigma = TRUE) ~
+                             me(rc2_med, rc2_se),
+                           data = xx,
+                           family = gaussian())
 
 
 
 
+### MODELS OF CORRELATIONS BETWEEN DEMOGRAPHIC METRICS AND INDIVIDUAL TRAITS
+trts <- c("logLeafArea",
+          "logLMA", 
+          "logLeafThicknessMean",
+          "LDMC",
+          "logRSratio",
+          "logSRL",
+          "logRTD",
+          "logRootLength",
+          "logRootAvgDiam",
+          "logRootDepth",
+          "logRootTips")
+
+trt_me_survavg <- list()
+trt_me_growavg <- list()
+trt_me_st <- list()
+trt_me_ss <- list()
+trt_me_gt <- list()
+trt_me_gs <- list()
+
+for(i in seq_along(trts)){
+  xx[paste0(trts[i], "_med")] <- tapply(pctraits[,trts[i]], pctraits$Species, median)
+  xx[paste0(trts[i], "_se")] <- tapply(pctraits[,trts[i]], pctraits$Species, se)
+  
+  xx$x_med <- xx[paste0(trts[i], "_med")][,1]
+  xx$x_se <- xx[paste0(trts[i], "_se")][,1]
+  
+  # Average survival x traits
+  trt_me_survavg[[i]] <- brm(surv_avg ~
+                               me(x_med, x_se),
+                             data = xx,
+                             family = gaussian())
+
+  # Average growth x traits
+  trt_me_growavg[[i]] <- brm(grow_avg | resp_se(grow_se, sigma = TRUE) ~
+                          me(x_med, x_se),
+                        data = xx,
+                        family = gaussian())
+  
+  # Survival tolerance x traits
+  trt_me_st[[i]] <- brm(surv_tol | resp_se(surv_tol_se, sigma = TRUE) ~
+                              me(x_med, x_se),
+                            data = xx,
+                            family = gaussian())
+
+  # Survival sensitivity x traits
+  trt_me_ss[[i]] <- brm(surv_sens | resp_se(surv_sens_se, sigma = TRUE) ~
+                              me(x_med, x_se),
+                            data = xx,
+                            family = gaussian())
+
+  # Growth tolerance x traits
+  trt_me_gt[[i]] <- brm(grow_tol | resp_se(grow_tol_se, sigma = TRUE) ~
+                              me(x_med, x_se),
+                            data = xx,
+                            family = gaussian())
+
+  # Growth sensitivity x traits
+  trt_me_gs[[i]] <- brm(grow_sens | resp_se(grow_sens_se, sigma = TRUE) ~
+                              me(x_med, x_se),
+                            data = xx,
+                            family = gaussian())
+
+  names(trt_me_survavg)[i] <- trts[i]
+  names(trt_me_growavg)[i] <- trts[i]
+  names(trt_me_st)[i] <- trts[i]
+  names(trt_me_ss)[i] <- trts[i]
+  names(trt_me_gt)[i] <- trts[i]
+  names(trt_me_gs)[i] <- trts[i]
+
+}
+
+
+### REGENERATE TABLE S9 WITH MEASUREMENT ERROR MODELS
+trt_me_survavg <- c(trt_me_survavg, list(fit_indiv_me_avgsurv_rc1, fit_indiv_me_avgsurv_rc2))
+trt_me_growavg <- c(trt_me_growavg, list(fit_indiv_me_avggrow_rc1, fit_indiv_me_avggrow_rc2))
+trt_me_ss <- c(trt_me_ss, list(fit_indiv_me_ss_rc1, fit_indiv_me_ss_rc2))
+trt_me_st <- c(trt_me_st, list(fit_indiv_me_st_rc1, fit_indiv_me_st_rc2))
+trt_me_gs <- c(trt_me_gs, list(fit_indiv_me_gs_rc1, fit_indiv_me_gs_rc2))
+trt_me_gt <- c(trt_me_gt, list(fit_indiv_me_gt_rc1, fit_indiv_me_gt_rc2))
+
+names(trt_me_survavg)[12:13] <- c("RC1", "RC2")
+names(trt_me_growavg)[12:13] <- c("RC1", "RC2")
+names(trt_me_st)[12:13] <- c("RC1", "RC2")
+names(trt_me_ss)[12:13] <- c("RC1", "RC2")
+names(trt_me_gt)[12:13] <- c("RC1", "RC2")
+names(trt_me_gs)[12:13] <- c("RC1", "RC2")
+
+tab <- matrix(nrow=13, ncol=6)
+
+for(i in 1:13){
+  
+  for(m in 1:6){
+    
+    modlist <- list(trt_me_survavg, trt_me_growavg, trt_me_st, trt_me_ss, trt_me_gt, trt_me_gs)[[m]]
+    
+    sig <- sign(fixef(modlist[[i]])[2,3]) == sign(fixef(modlist[[i]])[2,4])
+
+      tab[i,m] <- paste0(
+      round(fixef(modlist[[i]])[2,1], 2),
+      " [",
+      round(fixef(modlist[[i]])[2,3], 2),
+      ", ",
+      round(fixef(modlist[[i]])[2,4], 2),
+      "]",
+      ifelse(sig, "*", "")) 
+    
+  }
+}
+
+
+rownames(tab) <- c(logfoctraits[c(5:15)], "RC1", "RC2")
+colnames(tab) <- c("Average survival",
+                   "Average growth",
+                   "Survival tolerance",
+                   "Survival sensitivity",
+                   "Growth tolerance",
+                   "Growth sensitivity")
+
+
+tab
+
+write.csv(tab, file="Tables/TableS9_demographic-traits-correlations_20240112.csv")
+
+
+
+
+
+###### Trade-offs between tolerance and sensitivity metrics
+names(xx)
+
+# Average survival vs. average growth
+fit_me_as_ag <- brm(surv_avg  ~
+                      me(grow_avg, grow_se),
+                    data = xx,
+                    family = gaussian())
+fit_me_as_ag
+
+# Survival tolerance vs. survival sensitivity
+fit_me_st_ss <- brm(surv_tol | resp_se(surv_tol_se, sigma = TRUE) ~
+                      me(surv_sens, surv_sens_se),
+                    data = xx,
+                    family = gaussian())
+fit_me_st_ss
+plot(surv_sens, surv_tol)
+abline(0.5, -0.31)
+
+# Growth tolerance vs. growth sensitivity
+fit_me_gt_gs <- brm(grow_tol | resp_se(grow_tol_se, sigma = TRUE) ~
+                      me(grow_sens, grow_sens_se),
+                    data = xx,
+                    family = gaussian())
+fit_me_gt_gs
+plot(grow_sens, grow_tol)
+abline(0.04, -0.39)
+
+# Survival tolerance vs. growth tolerance
+fit_me_st_gt <- brm(surv_tol | resp_se(surv_tol_se, sigma = TRUE) ~
+                      me(grow_tol, grow_tol_se),
+                    data = xx,
+                    family = gaussian())
+fit_me_st_gt
+plot(grow_tol, surv_tol)
+abline(0.41, -4.71)
+
+
+# Survival sensitivity vs. growth sensitivity
+fit_me_ss_gs <- brm(surv_sens | resp_se(surv_sens_se, sigma = TRUE) ~
+                      me(grow_sens, grow_sens_se),
+                    data = xx,
+                    family = gaussian())
+fit_me_ss_gs
+plot(grow_sens, surv_sens)
+abline(0.28, 0.1)
 
 ##################################################################
 ### FIGURE OF SPECIES TRAITS VS. AVERAGE DEMOGRAPHIC RATES
 ##################################################################
 
-pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/FigureX_new.pdf",
-    width=10, height=11)
+# pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/FigureX_new.pdf", width=10, height=11)
 
 par(mfcol=c(6,4), mar=c(4,4,0.5,0.5))
+
+tapply(pctraits[,logfoctraits[i]], pctraits$Species, se, na.rm=T)
 
 for(i in 5:length(foctraits)){
   plot(tapply(pctraits[,logfoctraits[i]], pctraits$Species, mean, na.rm=T), avg_surv, 
@@ -909,6 +1314,7 @@ plot(tapply(ord_new$scores[,1], pctraits$Species, mean), avg_surv,
      pch=16, col=cols, cex=1.5, main=logfoctraits[i])
 plot(tapply(ord_new$scores[,2], pctraits$Species, mean), avg_grow, 
      pch=17, col=cols, cex=1.5)
+
 dev.off()
 
 
@@ -991,7 +1397,7 @@ colnames(survcors) <- paste("surv_avg-", colnames(survcors), sep="")
 
 
 write.csv(cbind(growcors, survcors, tol_sens), 
-          "/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Tables/TableX_demographic-traits-correlations_20230831.csv")
+          "/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Tables/TableX_demographic-traits-correlations_20230906.csv")
       
 
 
@@ -1000,78 +1406,82 @@ write.csv(cbind(growcors, survcors, tol_sens),
 ##### FIGURE 4 ON DEMOGRAPHIC METRICS AND RC1 AND RC2 ######
 ############################################################
 
-pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/Figure4_20230831.pdf", height=6, width=12)
+pdf("/Users/au529793/Projects/GIT/Luquillo_LTER_Seedling_Drought_Experiment/Figures/Figure4_20240112.pdf", height=6, width=12)
 
 par(mfcol=c(2,4), mar=c(4,5,1,1))
 
-plot(tapply(ord_new$scores[,1], pctraits$Species, mean),
-     surv_sens, pch=16, col=cols, cex=2, xlab="RC1", ylab="Survival sensitivity")
-mtext("A", 3, -2, adj=0.95, font=2)
-mod <- lm(surv_sens ~ tapply(ord_new$scores[,1], pctraits$Species, mean))
-abline(mod, lty=ifelse(summary(mod)$coef[2,4] < 0.05, 1, 3),
-       col=ifelse(summary(mod)$coef[2,4] < 0.05, 1, 'grey'),
-       lwd=ifelse(summary(mod)$coef[2,4] < 0.05, 2, 1))
+plot(xx$rc1_med, surv_sens, pch=16, col=cols, cex=2, xlab="RC1", ylab="Survival sensitivity")
+segments(xx$rc1_med - xx$rc1_se, xx$surv_sens, xx$rc1_med + xx$rc1_se, xx$surv_sens)
+segments(xx$rc1_med, xx$surv_sens - xx$surv_sens_se, xx$rc1_med, xx$surv_sens + xx$surv_sens_se)
+mtext("A", 3, -2, adj=0.05, font=2)
+sig <- sign(fixef(fit_indiv_me_ss_rc1)[2,3])==sign(fixef(fit_indiv_me_ss_rc1)[2,4])
+abline(fixef(fit_indiv_me_ss_rc1)[1,1], fixef(fit_indiv_me_ss_rc1)[2,1], 
+       lty=ifelse(sig, 1, 3))
 
-legend('topleft', legend=sp_labs, bty='n', pch=16, 
+legend('topright', legend=sp_labs, bty='n', pch=16, 
        col=cols, cex=1, text.font=3, pt.cex=2)
 
-plot(tapply(ord_new$scores[,2], pctraits$Species, mean),
-     surv_sens, pch=16, col=cols, cex=2, xlab="RC2", ylab="Survival sensitivity")
-mtext("B", 3, -2, adj=0.05, font=2)
-mod <- lm(surv_sens ~ tapply(ord_new$scores[,2], pctraits$Species, mean))
-abline(mod, lty=ifelse(summary(mod)$coef[2,4] < 0.05, 1, 3),
-       col=ifelse(summary(mod)$coef[2,4] < 0.05, 1, 'grey'),
-       lwd=ifelse(summary(mod)$coef[2,4] < 0.05, 2, 1))
-
-plot(tapply(ord_new$scores[,1], pctraits$Species, mean),
-     surv_tol, pch=16, col=cols, cex=2, xlab="RC1", ylab="Survival tolerance")
-mtext("C", 3, -2, adj=0.05, font=2)
-mod <- lm(surv_tol ~ tapply(ord_new$scores[,1], pctraits$Species, mean))
-abline(mod, lty=ifelse(summary(mod)$coef[2,4] < 0.05, 1, 3),
-       col=ifelse(summary(mod)$coef[2,4] < 0.05, 1, 'grey'),
-       lwd=ifelse(summary(mod)$coef[2,4] < 0.05, 2, 1))
-
-plot(tapply(ord_new$scores[,2], pctraits$Species, mean),
-     surv_tol, pch=16, col=cols, cex=2, xlab="RC2", ylab="Survival tolerance")
-mtext("D", 3, -2, adj=0.05, font=2)
-mod <- lm(surv_tol ~ tapply(ord_new$scores[,2], pctraits$Species, mean))
-abline(mod, lty=ifelse(summary(mod)$coef[2,4] < 0.05, 1, 3),
-       col=ifelse(summary(mod)$coef[2,4] < 0.05, 1, 'grey'),
-       lwd=ifelse(summary(mod)$coef[2,4] < 0.05, 2, 1))
-
-plot(tapply(ord_new$scores[,1], pctraits$Species, mean),
-     grow_sens, pch=16, col=cols, cex=2, xlab="RC1", ylab="Growth sensitivity")
+plot(xx$rc2_med, surv_sens, pch=16, col=cols, cex=2, xlab="RC2", ylab="Survival sensitivity")
+segments(xx$rc2_med - xx$rc2_se, xx$surv_sens, xx$rc2_med + xx$rc2_se, xx$surv_sens)
+segments(xx$rc2_med, xx$surv_sens - xx$surv_sens_se, xx$rc2_med, xx$surv_sens + xx$surv_sens_se)
 mtext("E", 3, -2, adj=0.05, font=2)
-mod <- lm(grow_sens ~ tapply(ord_new$scores[,1], pctraits$Species, mean))
-abline(mod, lty=ifelse(summary(mod)$coef[2,4] < 0.05, 1, 3),
-       col=ifelse(summary(mod)$coef[2,4] < 0.05, 1, 'grey'),
-       lwd=ifelse(summary(mod)$coef[2,4] < 0.05, 2, 1))
+sig <- sign(fixef(fit_indiv_me_ss_rc2)[2,3])==sign(fixef(fit_indiv_me_ss_rc2)[2,4])
+abline(fixef(fit_indiv_me_ss_rc2)[1,1], fixef(fit_indiv_me_ss_rc2)[2,1], 
+       lty=ifelse(sig, 1, 3))
 
-plot(tapply(ord_new$scores[,2], pctraits$Species, mean),
-     grow_sens, pch=16, col=cols, cex=2, xlab="RC2", ylab="Growth sensitivity")
+plot(xx$rc1_med, surv_tol, pch=16, col=cols, cex=2, xlab="RC1", ylab="Survival tolerance")
+segments(xx$rc1_med - xx$rc1_se, xx$surv_tol, xx$rc1_med + xx$rc1_se, xx$surv_tol)
+segments(xx$rc1_med, xx$surv_tol - xx$surv_tol_se, xx$rc1_med, xx$surv_tol + xx$surv_tol_se)
+mtext("B", 3, -2, adj=0.05, font=2)
+sig <- sign(fixef(fit_indiv_me_st_rc1)[2,3])==sign(fixef(fit_indiv_me_st_rc1)[2,4])
+abline(fixef(fit_indiv_me_st_rc1)[1,1], fixef(fit_indiv_me_st_rc1)[2,1], 
+       lty=ifelse(sig, 1, 3))
+
+plot(xx$rc2_med, surv_tol, pch=16, col=cols, cex=2, xlab="RC2", ylab="Survival tolerance")
+segments(xx$rc2_med - xx$rc2_se, xx$surv_tol, xx$rc2_med + xx$rc2_se, xx$surv_tol)
+segments(xx$rc2_med, xx$surv_tol - xx$surv_tol_se, xx$rc2_med, xx$surv_tol + xx$surv_tol_se)
 mtext("F", 3, -2, adj=0.05, font=2)
-mod <- lm(grow_sens ~ tapply(ord_new$scores[,2], pctraits$Species, mean))
-abline(mod, lty=ifelse(summary(mod)$coef[2,4] < 0.05, 1, 3),
-       col=ifelse(summary(mod)$coef[2,4] < 0.05, 1, 'grey'),
-       lwd=ifelse(summary(mod)$coef[2,4] < 0.05, 2, 1))
+sig <- sign(fixef(fit_indiv_me_st_rc2)[2,3])==sign(fixef(fit_indiv_me_st_rc2)[2,4])
+abline(fixef(fit_indiv_me_st_rc2)[1,1], fixef(fit_indiv_me_st_rc2)[2,1], 
+       lty=ifelse(sig, 1, 3))
 
-plot(tapply(ord_new$scores[,1], pctraits$Species, mean),
-     grow_tol, pch=16, col=cols, cex=2, xlab="RC1", ylab="Growth tolerance")
-mtext("G", 3, -2, adj=0.95, font=2)
-mod <- lm(grow_tol ~ tapply(ord_new$scores[,1], pctraits$Species, mean))
-abline(mod, lty=ifelse(summary(mod)$coef[2,4] < 0.05, 1, 3),
-       col=ifelse(summary(mod)$coef[2,4] < 0.05, 1, 'grey'),
-       lwd=ifelse(summary(mod)$coef[2,4] < 0.05, 2, 1))
+plot(xx$rc1_med, grow_sens, pch=16, col=cols, cex=2, xlab="RC1", ylab="Growth sensitivity")
+segments(xx$rc1_med - xx$rc1_se, xx$grow_sens, xx$rc1_med + xx$rc1_se, xx$grow_sens)
+segments(xx$rc1_med, xx$grow_sens - xx$grow_sens_se, xx$rc1_med, xx$grow_sens + xx$grow_sens_se)
+mtext("C", 3, -2, adj=0.05, font=2)
+sig <- sign(fixef(fit_indiv_me_gs_rc1)[2,3])==sign(fixef(fit_indiv_me_gs_rc1)[2,4])
+abline(fixef(fit_indiv_me_gs_rc1)[1,1], fixef(fit_indiv_me_gs_rc1)[2,1], 
+       lty=ifelse(sig, 1, 3))
 
-plot(tapply(ord_new$scores[,2], pctraits$Species, mean),
-     grow_tol, pch=16, col=cols, cex=2, xlab="RC2", ylab="Growth tolerance")
+plot(xx$rc2_med, grow_sens, pch=16, col=cols, cex=2, xlab="RC2", ylab="Growth sensitivity")
+segments(xx$rc2_med - xx$rc2_se, xx$grow_sens, xx$rc2_med + xx$rc2_se, xx$grow_sens)
+segments(xx$rc2_med, xx$grow_sens - xx$grow_sens_se, xx$rc2_med, xx$grow_sens + xx$grow_sens_se)
+mtext("G", 3, -2, adj=0.05, font=2)
+sig <- sign(fixef(fit_indiv_me_gs_rc2)[2,3])==sign(fixef(fit_indiv_me_gs_rc2)[2,4])
+abline(fixef(fit_indiv_me_gs_rc2)[1,1], fixef(fit_indiv_me_gs_rc2)[2,1], 
+       lty=ifelse(sig, 1, 3))
+
+plot(xx$rc1_med, grow_tol, pch=16, col=cols, cex=2, xlab="RC1", ylab="Growth tolerance")
+segments(xx$rc1_med - xx$rc1_se, xx$grow_tol, xx$rc1_med + xx$rc1_se, xx$grow_tol)
+segments(xx$rc1_med, xx$grow_tol - xx$grow_tol_se, xx$rc1_med, xx$grow_tol + xx$grow_tol_se)
+mtext("D", 3, -2, adj=0.95, font=2)
+sig <- sign(fixef(fit_indiv_me_gt_rc1)[2,3])==sign(fixef(fit_indiv_me_gt_rc1)[2,4])
+abline(fixef(fit_indiv_me_gt_rc1)[1,1], fixef(fit_indiv_me_gt_rc1)[2,1], 
+       lty=ifelse(sig, 1, 3))
+
+plot(xx$rc2_med, grow_tol, pch=16, col=cols, cex=2, xlab="RC2", ylab="Growth tolerance")
+segments(xx$rc2_med - xx$rc2_se, xx$grow_tol, xx$rc2_med + xx$rc2_se, xx$grow_tol)
+segments(xx$rc2_med, xx$grow_tol - xx$grow_tol_se, xx$rc2_med, xx$grow_tol + xx$grow_tol_se)
 mtext("H", 3, -2, adj=0.95, font=2)
-mod <- lm(grow_tol ~ tapply(ord_new$scores[,2], pctraits$Species, mean))
-abline(mod, lty=ifelse(summary(mod)$coef[2,4] < 0.05, 1, 3),
-       col=ifelse(summary(mod)$coef[2,4] < 0.05, 1, 'grey'),
-       lwd=ifelse(summary(mod)$coef[2,4] < 0.05, 2, 1))
+sig <- sign(fixef(fit_indiv_me_gt_rc2)[2,3])==sign(fixef(fit_indiv_me_gt_rc2)[2,4])
+abline(fixef(fit_indiv_me_gt_rc2)[1,1], fixef(fit_indiv_me_gt_rc2)[2,1], 
+       lty=ifelse(sig, 1, 3))
+
 
 dev.off()
+
+
+
 
 ############################################################
 ############################################################
